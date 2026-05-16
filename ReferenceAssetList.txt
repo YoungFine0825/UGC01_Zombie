@@ -1,0 +1,2 @@
+/Game/Actor_Timeliness/CG023_NPC/Arts_Players/Mesh/SK_FullbodyNPC_M_QZ
+/Game/Actor_Timeliness/CG023_NPC/Arts_Players/Mesh/SK_FullbodyNPC_F_LYS
