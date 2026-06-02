@@ -5,10 +5,10 @@ DataTableRootDir=
 ProjectName=UGC01_Zombie
 ProjectTrueName=E6C153B027DB77A8EF790FC86E210D702AC06468E304913CEE43CC1BE1CCD9B5
 ProjectShortPath=/UGC01_Zombie/
-StartMapName=/UGC01_Zombie/UGCmap
+StartMapName=/UGC01_Zombie/Asset/Maps/Town/L_Town
 MapMode=0
 bIsBigWorld=0
-Version=1.36.11.29252
+Version=1.36.11.29258
 UpdateVersion=10
 GameModePath=/UGC01_Zombie/Asset/Blueprint/UGCGameMode.UGCGameMode_C
 
@@ -44,7 +44,7 @@ BeyondRankTime=10
 BeyondRankNum=10
 TeamScoreCalculation=0
 bUseMultiModeMatchSetting=1
-MultiModeSettingNum=16
+MultiModeSettingNum=18
 
 [MultiModeSetting_0]
 bDefaultMode=1
@@ -599,5 +599,69 @@ TargetPlatform=LinuxServer+Android_ETC2+IOS+OpenHarmony_ETC2
 [DebugSettings]
 bRoomOB=0
 TeamPlayers=1,0;
+
+[MultiModeSetting_16]
+bDefaultMode=0
+ModeID=1017
+ModeName=
+ModeImage=
+ModeUnlockConditionDescription=
+NumberOfTeams=1
+TeamPlayers=1
+bIsAllowStageMatching=0
+TeamSettings="{\"TeamSettings\": [{\"NumberOfTeams\": 1,\"TeamPlayers\": 4}]}"
+bEnableChat=0
+bEnableRoomChat=0
+ChannelName=全部
+RoomName=全部
+bEnablePrivateChat=0
+bEnableTeamChat=0
+bShowMessage=0
+bMessageDisappear=0
+MessageLifetime=0.0
+MaxMessageLines=6
+bEnableSystemChannel=0
+bEnableChatBubble=0
+BubbleLifetime=10
+MatchMethod=1
+InitialScore=2000
+MinScore=0
+MaxScore=4000
+RankDensity=100
+BeyondRankTime=10
+BeyondRankNum=10
+TeamScoreCalculation=0
+
+[MultiModeSetting_17]
+bDefaultMode=0
+ModeID=1018
+ModeName=
+ModeImage=
+ModeUnlockConditionDescription=
+NumberOfTeams=1
+TeamPlayers=2
+bIsAllowStageMatching=1
+TeamSettings="{\"TeamSettings\": [{\"NumberOfTeams\": 1,\"TeamPlayers\": 4},{\"NumberOfTeams\": 1,\"TeamPlayers\": 3},{\"NumberOfTeams\": 1,\"TeamPlayers\": 2},{\"NumberOfTeams\": 1,\"TeamPlayers\": 1}]}"
+bEnableChat=0
+bEnableRoomChat=0
+ChannelName=全部
+RoomName=全部
+bEnablePrivateChat=0
+bEnableTeamChat=0
+bShowMessage=0
+bMessageDisappear=0
+MessageLifetime=0.0
+MaxMessageLines=6
+bEnableSystemChannel=0
+bEnableChatBubble=0
+BubbleLifetime=10
+MatchMethod=1
+InitialScore=2000
+MinScore=0
+MaxScore=4000
+RankDensity=100
+BeyondRankTime=10
+BeyondRankNum=10
+TeamScoreCalculation=0
 
 

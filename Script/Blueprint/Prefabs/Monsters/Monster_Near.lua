@@ -12,7 +12,7 @@ local Monster_Near =
 function Monster_Near:ReceiveBeginPlay()
     ugcprint("Monster_Near:ReceiveBeginPlay")
     Monster_Near.SuperClass.ReceiveBeginPlay(self)
-
+    self.bVaultIsOpen = true
     self.LuaLogicPart = UGCGameSystem.UGCRequire("Script.Blueprint.Prefabs.Monsters.LuaMonsterLogicPart"):New()
     self.LuaLogicPart.Owner = self
     self.LuaLogicPart:ReceiveBeginPlay()

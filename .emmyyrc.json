@@ -1,0 +1,15 @@
+{
+  "diagnostics": {
+    "disable": [
+      "need-check-nil",
+      "undefined-global",
+      "annotation-usage-error",
+      "doc-syntax-error",
+      "undefined-field",
+      "unnecessary-if",
+      "assign-type-mismatch",
+      "undefined-doc-param"
+    ],
+    "enable":false
+  }
+}

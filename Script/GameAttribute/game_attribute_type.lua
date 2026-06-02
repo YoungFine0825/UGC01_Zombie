@@ -303,6 +303,8 @@ UGCCustomGameAttributeType = {
 	UGCAttributeGroup_Character_ShotgunDamageRatio = 'ShotgunDamageRatio',
 	--Character [射手步枪伤害加成-DMRDamageRatio],
 	UGCAttributeGroup_Character_DMRDamageRatio = 'DMRDamageRatio',
+	--Character [体力值-Stamina],
+	UGCAttributeGroup_Character_Stamina = 'Stamina',
 }; 
 
 UGCCustomGameAttributeTypeCommentMap = { 
@@ -330,5 +332,6 @@ UGCCustomGameAttributeTypeCommentMap = {
 	['MachineDamageRatio'] = 'Character [机枪伤害加成-MachineDamageRatio]', 
 	['ShotgunDamageRatio'] = 'Character [霰弹枪伤害加成-ShotgunDamageRatio]', 
 	['DMRDamageRatio'] = 'Character [射手步枪伤害加成-DMRDamageRatio]', 
+	['Stamina'] = 'Character [体力值-Stamina]', 
 }; 
 

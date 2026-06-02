@@ -2,6 +2,23 @@
 
 -- sorted by struct name asc 
 
+---@class ShopV2_Time
+---@field Hour int32
+---@field Min int32
+---@field Sec int32
+
+---@class ShopV2_Timespan
+---@field Day int32
+---@field Hour int32
+---@field Min int32
+---@field Sec int32
+
+---@class ShopV2_TabInfo
+---@field TabID int32
+---@field TabName FString
+---@field TabShopName FString
+---@field TabShopDesc FString
+
 ---@class UGCLevelAttribute
 ---@field Attribute FGameAttributeContainer
 ---@field Value float
@@ -197,10 +214,6 @@
 ---@field HeroAbilityLabelIsIcon bool
 ---@field HeroDetail3 FText
 
----@class ShopV2_IDAndNum
----@field ID int32
----@field Num int32
-
 ---@class ShopV2_ItemQuality
 ---@field ItemID int32
 ---@field QualityRank int32
@@ -212,20 +225,15 @@
 ---@field RefreshNum int32
 ---@field Price int32
 
----@class ShopV2_TabInfo
----@field TabID int32
----@field TabName FString
----@field TabShopName FString
----@field TabShopDesc FString
+---@class ShopV2_IDAndNum
+---@field ID int32
+---@field Num int32
 
----@class ShopV2_Time
----@field Hour int32
----@field Min int32
----@field Sec int32
-
----@class ShopV2_Timespan
----@field Day int32
----@field Hour int32
----@field Min int32
----@field Sec int32
+---@class Struct_WeaponConfig
+---@field Id int32
+---@field WeaponItemId int32
+---@field AmmoItemId int32
+---@field DeliverAmmoNumber int32
+---@field WeaponDesc FString
+---@field WeaponLevel int32
 

@@ -75,15 +75,18 @@ end
 
 function UGC_ModeSelection_UIBP:OnChooseClicked()
     if self.Data.FocusedMode then
-        if LobbyModel:IsModeLocked(self.Data.FocusedMode) then
-            UGCWidgetManagerSystem.ShowTipsUI("该模式已被锁定！")
-            return
-        else
-            local PC = UGCGameSystem.GetLocalPlayerController()
+        -- if LobbyModel:IsModeLocked(self.Data.FocusedMode) then
+        --     UGCWidgetManagerSystem.ShowTipsUI("该模式已被锁定！")
+        --     return
+        -- else
+        --     local PC = UGCGameSystem.GetLocalPlayerController()
 
-            LobbyModel:SelectMode(self.Data.FocusedMode)
-            LobbyFlow:Go(LobbyFlowState.LFS_Lobby)
-        end
+        --     LobbyModel:SelectMode(self.Data.FocusedMode)
+        --     LobbyFlow:Go(LobbyFlowState.LFS_Lobby)
+        -- end
+        --未来只会有一个模式，不用判断解锁
+        LobbyModel:SelectMode(self.Data.FocusedMode)
+        LobbyFlow:Go(LobbyFlowState.LFS_Lobby)
     else
         UGCWidgetManagerSystem.ShowTipsUI("模式为空！")
         ugcprint("[UGC_ModeSelection_UIBP:OnChooseClicked] FocusedMode is nil!")

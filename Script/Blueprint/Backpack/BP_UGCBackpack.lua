@@ -67,6 +67,9 @@ function BP_UGCBackpack:InitEventAfterPlayerEnter()
     
     self:InitField();
 
+    --先保证背包里有默认武器
+    self:EnsureDefaultWeapons(true)
+
     if self.OwnerController ~= nil then
         -- 在玩家PostLogin之后执行初始化逻辑
         local Message = UGCGenericMessageSystem.Messages.UGC.PlayerPawn.PawnRespawn;
@@ -140,6 +143,8 @@ function BP_UGCBackpack:OnPawnRespawn()
             self:ApplyEquipAffixEffect(EquipItem);
         end
     end
+
+    self:EnsureDefaultWeapons(true)
 end
 
 ---判断ItemID是不是一个有效实例
@@ -341,6 +346,31 @@ function BP_UGCBackpack:OnPlayerSwitchWeapon(SlotName)
         self.LastWeapon = Weapon.ItemDefineID;
     else
         ugcprint("[BP_UGCBackpack:OnPlayerSwitchWeapon] Don't Hold Weapon");
+    end
+end
+
+---下发默认武器
+function BP_UGCBackpack:EnsureDefaultWeapons(bNeedEquip)
+    if not UGCGameSystem.IsServer() then
+        return false
+    end
+    if GameData.GetGameModeName(UGCMultiMode.GetModeID) == GameData.ModeName.Lobby then
+        return false
+    end
+
+    self:InitField()
+
+    local pc = self.OwnerController
+    if pc == nil then
+        ugcprint("[BP_UGCBackpack:EnsureDefaultWeapon] OwnerController is nil")
+        return false
+    end
+    local weaponCfgId = 1001
+    local delivered = GameplaySystem.WeaponSystem.DeliverWeaponToPlayer(pc,weaponCfgId)
+
+    if bNeedEquip then
+        local slotName = "EquipmentSlot.Core.MainSlot1"--"EquipmentSlot.Core.SubSlot"
+         GameplaySystem.WeaponSystem.EquipGainedWeapon(pc,weaponCfgId,slotName)
     end
 end
 

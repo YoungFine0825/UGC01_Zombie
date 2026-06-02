@@ -4,8 +4,14 @@ local UGCGameMode = {}
 UGCGameMode.IsStartMatch = false
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 local UGCGameState = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameState')
+--gameplay相关子系统启动器
+---@type GameplayBooter
+local GameplayBooter = UGCGameSystem.UGCRequire("Script.Gameplay.GameplayBooter")
 
 function UGCGameMode:ReceiveBeginPlay()
+
+    GameplayBooter.ReceiveBeginPlay()
+
     local ModeID = UGCMultiMode.GetModeID()
     self:InitMode(ModeID)
 
@@ -16,6 +22,11 @@ function UGCGameMode:ReceiveBeginPlay()
     else
         print("[HeroSelection] Error: UGCGameMode:ReceiveBeginPlay: HeroActor is not nil.")
     end
+end
+
+
+function UGCGameMode:ReceiveEndPlay()
+    GameplayBooter.ReceiveEndPlay()
 end
 
 function UGCGameMode:InitMode(ModeID)
@@ -31,6 +42,16 @@ function UGCGameMode:InitMode(ModeID)
     ugcprint("UGCGameMode:ReceiveBeginPlay ModeID="..ModeID)
 
     UGCLevelFlowSystem.EnableLevelFlow(UGCGameSystem.GetUGCResourcesFullPath(UGCGameData.GetGameModeActorMgrConfig(ModeID)))
+end
+
+function UGCGameMode:OnPlayerRespawned(PlayerKey, bIsAI)
+    if not bIsAI then
+        ugcprint("UGCGameMode:OnPlayerRespawned PlayerKey="..PlayerKey)
+    end
+end
+
+function UGCGameMode:UGC_PlayerRespawnEvent(RespawnedController)
+	ugcprint("UGCGameMode:UGC_PlayerRespawnEvent PlayerKey="..RespawnedController.PlayerKey)
 end
 
 -- function UGCGameMode:ExecuteStartMatch()

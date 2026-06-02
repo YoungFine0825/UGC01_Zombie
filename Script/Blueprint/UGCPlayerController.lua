@@ -24,6 +24,8 @@ UGCPlayerController.bIsTeamLeader = false
 UGCPlayerController.LobbyTeammatePlayerKeys = {}
 -- 大厅队友PlayerKey更新时的委托 
 UGCPlayerController.OnLobbyTeammatePlayerKeysUpdate = Delegate.New()
+UGCPlayerController.bDefaultWeaponGranted = false
+UGCPlayerController.DefaultWeaponRetryTimer = nil
 
 -- 大厅信息配置
 UGCPlayerController.LobbyInfo = {
@@ -76,6 +78,7 @@ function UGCPlayerController:HandleBeginPlayInServerForFighting()
     local ld = UGCTeamSystem.GetTeamLeaderKeyByTeamID(UGCTeamSystem.GetTeamIDByPlayerKey(UGCGameSystem.GetPlayerKeyByPlayerController(self)))
     print("[UGCPlayerController] HandleBeginPlayInServerForFighting "..#ld)
 end
+
 
 function UGCPlayerController:HandleBeginPlayInClientForLobby()    
     LobbyFlow:Go(LobbyFlowState.LFS_Lobby)
@@ -169,6 +172,7 @@ end
 
 function UGCPlayerController:ReceiveEndPlay()
     if UGCGameSystem.IsServer() then
+        self:StopTryAddDefaultWeaponTimer()
         UGCGenericMessageSystem.UnListenMessage(self, UGCGenericMessageSystem.Messages.UGC.Player.PlayerEnter) 
         UGCGenericMessageSystem.UnListenMessage(self, UGCGenericMessageSystem.Messages.UGC.Player.PlayerExit) 
     end

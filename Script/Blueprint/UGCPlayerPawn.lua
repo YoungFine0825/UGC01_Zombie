@@ -1,4 +1,5 @@
 ---@class UGCPlayerPawn_C:BP_UGCPlayerPawn_C
+---@field PlayerStaminaComponent PlayerStaminaComponent_C
 ---@field PlayerLevel int32
 --Edit Below--
 local UGCPlayerPawn = {}
@@ -27,6 +28,24 @@ function UGCPlayerPawn:InitInServer()
     UGCGenericMessageSystem.ListenGlobalMessage(self, UGCGenericMessageSystem.Messages.UGC.PlayerPawn.PawnRespawn, self, self.SetIsInvincible_Lua)
 
     self.DynamicStateEnterHandle:Add(self.ChangeState, self)
+
+    ugcprint("UGCPlayerPawn:InitInServer "..tostring(self.PlayerName))
+
+    --监听受伤
+    UGCGenericMessageSystem.ListenGlobalMessage(self,"UGC.PlayerPawn.PostTakeDamage",self,self.LuaPostTakeDamage)
+    local RecoverBuffClass = self:TryLoadRecoverHPBuffClass()
+    if RecoverBuffClass then
+        ugcprint("UGCPlayerPawn:InitInServer "..tostring(self.PlayerName).." Load RecoverBuff Class Successful!")
+    else
+        ugcprint("UGCPlayerPawn:InitInServer "..tostring(self.PlayerName).." Load RecoverBuff Class Failed!")
+    end
+    self.RecoverBuffClass = RecoverBuffClass
+end
+
+function UGCPlayerPawn:ReceiveEndPlay()
+    UGCPlayerPawn.SuperClass.ReceiveEndPlay(self)
+    UGCGenericMessageSystem.UnListenMessage(self, "UGC.PlayerPawn.PostTakeDamage")
+    UGCTimerUtility.RemoveLuaTimerByName("RecoverBuffTimer")
 end
 
 function UGCPlayerPawn:SetIsInvincible_Lua(_, PlayerKey)
@@ -105,5 +124,51 @@ function UGCPlayerPawn:GetAvailableServerRPCs()
     return
 end
 --]]
+
+--判断武器伤害类型
+---生效范围：服务器
+---@param VictimPlayer ASTExtraBaseCharacter|AUGCMobCharacter @造成伤害的玩家角色|怪物
+---@param DamageCauserActor AActor @伤害来源
+---@param EventInstigator Controller @伤害来源的玩家控制器
+---@param Damage float @伤害值
+---@param DamageContext FGameMagnitudeContext @伤害事件上下文
+function UGCPlayerPawn:LuaPostTakeDamage(VictimPlayer, DamageCauserActor, EventInstigator, Damage, DamageContext)
+    ugcprint("UGCPlayerPawn:LuaPostTakeDamage "..tostring(self.PlayerName))
+
+    if EventInstigator then
+        local PlayerKey = EventInstigator.PlayerKey
+        if PlayerKey then
+            ugcprint("UGCPlayerPawn:LuaPostTakeDamage "..tostring(self.PlayerName).." DamagePlayerKey="..tostring(PlayerKey))
+           self.PlayerState.DamagePlayerKeys[PlayerKey] = true 
+        end
+    end
+
+    --先清理Timer
+    UGCTimerUtility.RemoveLuaTimerByName("RecoverBuffTimer")
+
+    if not self.RecoverBuffClass then
+        local RecoverBuffClass = self:TryLoadRecoverHPBuffClass()
+        if not RecoverBuffClass then
+            ugcprint("UGCPlayerPawn:LuaPostTakeDamage: Cannot load RecoverHPBuff class !")
+            return
+        end
+    end
+
+    --清理Buff
+    UGCPersistEffectSystem.RemoveBuffByClass(self,self.RecoverBuffClass)
+
+    --受伤若干秒后添加回血Buff
+    UGCTimerUtility.CreateLuaTimer(2,function()
+        ugcprint("UGCPlayerPawn:LuaPostTakeDamage "..tostring(self.PlayerName).." Add RecoverBuff")
+        UGCPersistEffectSystem.AddBuffByClass(self,self.RecoverBuffClass)    
+    end,false,"RecoverBuffTimer")
+end
+
+function UGCPlayerPawn:TryLoadRecoverHPBuffClass()
+    local RecoverBuffPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Buffs/Buff_RecoverHP.Buff_RecoverHP_C')
+    local RecoverBuffClass = UE.LoadClass(RecoverBuffPath)
+    self.RecoverBuffClass = RecoverBuffClass
+    return RecoverBuffClass
+end
 
 return UGCPlayerPawn
