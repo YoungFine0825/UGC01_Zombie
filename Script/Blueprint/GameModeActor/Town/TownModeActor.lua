@@ -1,13 +1,16 @@
----@class TownModeActor_C:UGCLevelActor
----@field DefaultSceneRoot USceneComponent
+---@class TownModeActor_C:BP_Gameplay_LevelAcor_Base_C
+---@field ServerGameplayComponent BP_ServerGameplayComponent_C
 --Edit Below--
 local TownModeActor = {}
+
+local Metatable = UGCGameSystem.UGCRequire('Script.Blueprint.GameModeActor.BP_Gameplay_LevelAcor_Base')
+setmetatable(TownModeActor,{__index = Metatable})
  
---[[
+--[[--]]
 function TownModeActor:ReceiveBeginPlay()
     TownModeActor.SuperClass.ReceiveBeginPlay(self)
 end
---]]
+
 
 --[[
 function TownModeActor:ReceiveTick(DeltaTime)

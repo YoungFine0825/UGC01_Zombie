@@ -62,11 +62,13 @@ function UGC_GF_Currency_Item_UIBP:GetBattleItemData(BattleItemID)
     if GlobalActor then
         local ItemData = GlobalActor:GetItemData(BattleItemID)
         local pc = UGCGameSystem.GetLocalPlayerController();
-        local Count = ItemData.Count or 0;
+        local Count = ItemData and (ItemData.Count or 0) or 0
         if pc then
             Count = GlobalActor:GetItemNum(BattleItemID, pc)
         end
-        ItemData.Count = Count
+        if ItemData then
+            ItemData.Count = Count
+        end
         return ItemData
     end
 end

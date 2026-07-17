@@ -8,42 +8,42 @@
 LobbyWidgetType = {
     LWT_MainLobby = {
         Name = "MainLobby",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/UGC_Lobby_Main_UIBP.UGC_Lobby_Main_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/UGC_Lobby_Main_UIBP.UGC_Lobby_Main_UIBP_C',
         Instance = nil,
     },
     LWT_ModeSelect = {
         Name = "ModeSelect",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/UGC_ModeSelection_UIBP.UGC_ModeSelection_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/UGC_ModeSelection_UIBP.UGC_ModeSelection_UIBP_C',
         Instance = nil,
     },
     LWT_ClosePopupsTips = {
         Name = "LWT_ClosePopupsTips",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/UGC_ClosePopupsTips_UIBP.UGC_ClosePopupsTips_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/UGC_ClosePopupsTips_UIBP.UGC_ClosePopupsTips_UIBP_C',
         Instance = nil
     },
     LWT_TalentTree = {
         Name = "LWT_TalentTree",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/TalentTree_Main_UIBP.TalentTree_Main_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/TalentTree_Main_UIBP.TalentTree_Main_UIBP_C',
         Instance = nil
     },
     LWT_TalentTreeTip = {
         Name = "LWT_TalentTreeTip",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/Item/TalentTree_Introduce_Add_UIBP.TalentTree_Introduce_Add_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/Item/TalentTree_Introduce_Add_UIBP.TalentTree_Introduce_Add_UIBP_C',
         Instance = nil
     },
     LWT_TalentTreeTipConfirm = {
         Name = "LWT_TalentTreeTipConfirm",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/Item/TalentTree_Introduce_UIBP.TalentTree_Introduce_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/Item/TalentTree_Introduce_UIBP.TalentTree_Introduce_UIBP_C',
         Instance = nil
     },
     LWT_ModeDifficultyTip = {
         Name = "LWT_ModeDifficultyTip",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/Item/UGC_DifficultyTips_UIBP.UGC_DifficultyTips_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/Lobby/Item/UGC_DifficultyTips_UIBP.UGC_DifficultyTips_UIBP_C',
         Instance = nil
     },
     LWT_TalentTreePopup = {
         Name = "LWT_TalentTreePopup",
-        Path = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/TalentTree_Popup_UIBP.TalentTree_Popup_UIBP_C'),
+        Path = 'Asset/Blueprint/Arts_UI/Lobby/UIBP/TalentTree/TalentTree_Popup_UIBP.TalentTree_Popup_UIBP_C',
         Instance = nil
     },
 }
@@ -63,7 +63,7 @@ function LobbyUtils.GetWidget(WidgetType)
                 else
                     if not UGCGameSystem.GameState then return end
 
-                    local LobbyMainUIClass = UGCObjectUtility.LoadClass(WidgetType.Path)
+                    local LobbyMainUIClass = UGCObjectUtility.LoadClass(UGCGameSystem.GetUGCResourcesFullPath(WidgetType.Path))
                     local PlayerController = UGCGameSystem.GetLocalPlayerController()
 
                     if not LobbyMainUIClass or not PlayerController then return end

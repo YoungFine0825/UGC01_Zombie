@@ -26,13 +26,9 @@ function PortalManager:RequestTeleportToPortal()
 end
 
 function PortalManager:StartPortalCountDown()
-    if UGCGameSystem.GameState ~= nil then
-        UGCGameSystem.GameState:StartPortalCountDown()
-    end
+
 end
 
 function PortalManager:StopPortalCountDown()
-    if UGCGameSystem.GameState ~= nil then
-        UGCGameSystem.GameState:StopPortalCountDown()
-    end
+
 end

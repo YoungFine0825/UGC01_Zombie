@@ -2,11 +2,12 @@
 --Edit Below--
 local TownModeMgr = {}
  
---[[
+--[[--]]
 function TownModeMgr:ReceiveBeginPlay()
     TownModeMgr.SuperClass.ReceiveBeginPlay(self)
+    GameplayUtils.Print("TownModeMgr.ReceiveBeginPlay")
 end
---]]
+
 
 --[[
 function TownModeMgr:ReceiveTick(DeltaTime)
@@ -14,10 +15,11 @@ function TownModeMgr:ReceiveTick(DeltaTime)
 end
 --]]
 
---[[
+--[[--]]
 function TownModeMgr:ReceiveEndPlay()
-    TownModeMgr.SuperClass.ReceiveEndPlay(self) 
+    TownModeMgr.SuperClass.ReceiveEndPlay(self)
+    GameplayUtils.Print("TownModeMgr.ReceiveEndPlay")
 end
---]]
+
 
 return TownModeMgr

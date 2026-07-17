@@ -156,7 +156,7 @@ end
 function Breakthrough_ResultList_UIBP:Button_More_OnPressed()
 	local MoreData = {}
 	local Data = {}
-	Data.data = math.floor(self.PlayerState.GameRecordData.TotalMonsterKill)
+	Data.data = math.floor(self.PlayerState.GameRecordData.TotalKill)
 	Data.title = "总击杀怪物"
 	table.insert(MoreData,Data)
 	BreakthroughManager:ShowMoreTips(MoreData)

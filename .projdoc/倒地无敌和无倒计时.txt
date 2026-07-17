@@ -1,0 +1,2 @@
+把PlayerPawn的NearDeathComp组件的EnterNearDeathDamageInvincibleTime的值到足够大，
+就相当于实现倒地后不受攻击的效果。把BreathMax和Breath调到足够大，就相当于倒地后无倒计时。

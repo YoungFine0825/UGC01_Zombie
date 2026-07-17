@@ -25,10 +25,23 @@ ShopV2_RefreshResetRule = {
 }; 
 
 
+---@enum EInteractBehaviourDeductPropertyValueTarget
+EInteractBehaviourDeductPropertyValueTarget = { 
+    Player = 0,
+}; 
+
+
 ---@enum Enum_MainWeaponAffixType
 Enum_MainWeaponAffixType = { 
     Equip = 0,
     Hand = 1,
+}; 
+
+
+---@enum EInteractBehaviourGrantType
+EInteractBehaviourGrantType = { 
+    Weapon = 0,
+    Buff = 1,
 }; 
 
 

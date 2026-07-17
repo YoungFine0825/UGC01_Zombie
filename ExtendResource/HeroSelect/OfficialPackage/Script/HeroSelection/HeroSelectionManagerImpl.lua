@@ -240,7 +240,8 @@ function HeroSelectionManagerImpl:IsHeroFree(HeroID)
         return false
     end
 
-    return self:IsHeroPermanentFree(HeroID) or self:IsHeroTimeLimitedFree(HeroID)
+    --return self:IsHeroPermanentFree(HeroID) or self:IsHeroTimeLimitedFree(HeroID)
+    return true
 end
 
 function HeroSelectionManagerImpl:IsHeroTimeLimitedFree(HeroID)

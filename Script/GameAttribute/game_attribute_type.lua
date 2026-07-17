@@ -37,6 +37,10 @@ UGCNativeGameAttributeType = {
 	Character_HitBackIntensity = 'HitBackIntensity',
 	--Character [击退抗性-HitBackResist],
 	Character_HitBackResist = 'HitBackResist',
+	--Character [旋转屏幕灵敏度动态系数Yaw-DynamicTouchMoveScreenSensibilityRateYaw],
+	Character_DynamicTouchMoveScreenSensibilityRateYaw = 'DynamicTouchMoveScreenSensibilityRateYaw',
+	--Character [旋转屏幕灵敏度动态系数Pitch-DynamicTouchMoveScreenSensibilityRatePitch],
+	Character_DynamicTouchMoveScreenSensibilityRatePitch = 'DynamicTouchMoveScreenSensibilityRatePitch',
 
 ---------------------------------------------------------
 
@@ -80,6 +84,10 @@ UGCNativeGameAttributeType = {
 	Weapon_ShotGunHorizontalSpread = 'ShootWeaponEntityComp|ShotGunHorizontalSpread',
 	--Weapon [所有散布因子-GameDeviationFactor],
 	Weapon_GameDeviationFactor = 'ShootWeaponEntityComp|GameDeviationFactor',
+	--Weapon [开镜跳跃散布因子-ScopeJumpDeviationFactor],
+	Weapon_ScopeJumpDeviationFactor = 'ShootWeaponEntityComp|ScopeJumpDeviationFactor',
+	--Weapon [开镜Falling散布因子-ScopeFallingDeviationFactor],
+	Weapon_ScopeFallingDeviationFactor = 'ShootWeaponEntityComp|ScopeFallingDeviationFactor',
 	--Weapon [最终散布修改参数-DeviationFactorModifier],
 	Weapon_DeviationFactorModifier = 'ShootWeaponEntityComp|DeviationFactorModifier',
 	--Weapon [枪械开镜速度-WeaponAimInTime],
@@ -185,6 +193,8 @@ UGCNativeGameAttributeTypeCommentMap = {
 	['FallingDamageRatio'] = 'Character [跌落伤害倍率-FallingDamageRatio]', 
 	['HitBackIntensity'] = 'Character [击退强度-HitBackIntensity]', 
 	['HitBackResist'] = 'Character [击退抗性-HitBackResist]', 
+	['DynamicTouchMoveScreenSensibilityRateYaw'] = 'Character [旋转屏幕灵敏度动态系数Yaw-DynamicTouchMoveScreenSensibilityRateYaw]', 
+	['DynamicTouchMoveScreenSensibilityRatePitch'] = 'Character [旋转屏幕灵敏度动态系数Pitch-DynamicTouchMoveScreenSensibilityRatePitch]', 
 
 ---------------------------------------------------------
 
@@ -208,6 +218,8 @@ UGCNativeGameAttributeTypeCommentMap = {
 	['ShootWeaponEntityComp|ShotGunVerticalSpread'] = 'Weapon [散弹枪垂直散布-ShotGunVerticalSpread]', 
 	['ShootWeaponEntityComp|ShotGunHorizontalSpread'] = 'Weapon [散弹枪水平散布-ShotGunHorizontalSpread]', 
 	['ShootWeaponEntityComp|GameDeviationFactor'] = 'Weapon [所有散布因子-GameDeviationFactor]', 
+	['ShootWeaponEntityComp|ScopeJumpDeviationFactor'] = 'Weapon [开镜跳跃散布因子-ScopeJumpDeviationFactor]', 
+	['ShootWeaponEntityComp|ScopeFallingDeviationFactor'] = 'Weapon [开镜Falling散布因子-ScopeFallingDeviationFactor]', 
 	['ShootWeaponEntityComp|DeviationFactorModifier'] = 'Weapon [最终散布修改参数-DeviationFactorModifier]', 
 	['ShootWeaponEntityComp|WeaponAimInTime'] = 'Weapon [枪械开镜速度-WeaponAimInTime]', 
 	['ShootWeaponEntityComp|SightType'] = 'Weapon [倍镜类别-SightType]', 
@@ -305,6 +317,14 @@ UGCCustomGameAttributeType = {
 	UGCAttributeGroup_Character_DMRDamageRatio = 'DMRDamageRatio',
 	--Character [体力值-Stamina],
 	UGCAttributeGroup_Character_Stamina = 'Stamina',
+	--Character [局内得分-Score],
+	UGCAttributeGroup_Character_Score = 'Score',
+	--Character [局内击杀数-TotalKill],
+	UGCAttributeGroup_Character_TotalKill = 'TotalKill',
+	--Character [局内爆头数-TotalHeadshot],
+	UGCAttributeGroup_Character_TotalHeadshot = 'TotalHeadshot',
+	--Character [局内总伤害量-TotalDamage],
+	UGCAttributeGroup_Character_TotalDamage = 'TotalDamage',
 }; 
 
 UGCCustomGameAttributeTypeCommentMap = { 
@@ -333,5 +353,9 @@ UGCCustomGameAttributeTypeCommentMap = {
 	['ShotgunDamageRatio'] = 'Character [霰弹枪伤害加成-ShotgunDamageRatio]', 
 	['DMRDamageRatio'] = 'Character [射手步枪伤害加成-DMRDamageRatio]', 
 	['Stamina'] = 'Character [体力值-Stamina]', 
+	['Score'] = 'Character [局内得分-Score]', 
+	['TotalKill'] = 'Character [局内击杀数-TotalKill]', 
+	['TotalHeadshot'] = 'Character [局内爆头数-TotalHeadshot]', 
+	['TotalDamage'] = 'Character [局内总伤害量-TotalDamage]', 
 }; 
 

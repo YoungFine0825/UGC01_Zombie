@@ -1,5 +1,6 @@
 ---@class UGC_Countdown_Popups_UIBP_C:UUserWidget
 ---@field Background UImage
+---@field BackToLobbyBtn UButton
 ---@field BlockButton UButton
 ---@field Button_No UButton
 ---@field CanvasPanel_limit UCanvasPanel
@@ -14,9 +15,11 @@
 ---@field FreeRespawnZeroName UTextBlock
 ---@field FreeRespawnZeroText UTextBlock
 ---@field HorizontalBox_Quantity UHorizontalBox
+---@field Image_13 UImage
 ---@field Image_Icon UImage
 ---@field Image_OasisCoin UImage
 ---@field NewButton_Close UButton
+---@field RespawnBtn UButton
 ---@field RespawnPanel UCanvasPanel
 ---@field TextBlock_9 UTextBlock
 ---@field TextBlock_Consumption UTextBlock
@@ -51,7 +54,8 @@ function UGC_Countdown_Popups_UIBP:Construct()
 	self.Button_No.OnClicked:Add(self.Button_No_OnClicked, self)
     self.ExpandButton.GetUpButton.OnClicked:Add(self.Expand, self)
     self.ExpandButton.RespawnButton.OnClicked:Add(self.Expand, self)
-
+    self.RespawnBtn.OnClicked:Add(self.OnClickRespawnBtn, self)
+    self.BackToLobbyBtn.OnClicked:Add(self.OnClickBackToLobbyBtn, self)
     self.VirtualItemManager = UGCGamePartSystem.VirtualItemManager.GetGlobalActor()
 end
 
@@ -89,21 +93,21 @@ function UGC_Countdown_Popups_UIBP:Refresh()
 
     self.bRequestedRespawn = false
 
-    self:SetCoinInfo()
-    self:SetButtonState()
+    --self:SetCoinInfo()
+    --self:SetButtonState()
 
-    local PlayerState = UGCGameSystem.GetLocalPlayerState()
-    if PlayerState.AliveState == UGCGameData.AliveState.Dying then
-        self.ExpandButton.Switcher:SetActiveWidgetIndex(0)
-        self.FreeRespawnName:SetText("免费恢复")
-        self.FreeRespawnZeroName:SetText("免费恢复")
-        self.CoinRespawnName:SetText("恢复")
-    elseif PlayerState.AliveState == UGCGameData.AliveState.Dead then
-        self.ExpandButton.Switcher:SetActiveWidgetIndex(1)
-        self.FreeRespawnName:SetText("免费复活")
-        self.FreeRespawnZeroName:SetText("免费复活")
-        self.CoinRespawnName:SetText("复活")
-    end
+    --local PlayerState = UGCGameSystem.GetLocalPlayerState()
+    --if PlayerState.AliveState == UGCGameData.AliveState.Dying then
+    --    self.ExpandButton.Switcher:SetActiveWidgetIndex(0)
+    --    self.FreeRespawnName:SetText("免费恢复")
+    --    self.FreeRespawnZeroName:SetText("免费恢复")
+    --    self.CoinRespawnName:SetText("恢复")
+    --elseif PlayerState.AliveState == UGCGameData.AliveState.Dead then
+    --    self.ExpandButton.Switcher:SetActiveWidgetIndex(1)
+    --    self.FreeRespawnName:SetText("免费复活")
+    --    self.FreeRespawnZeroName:SetText("免费复活")
+    --    self.CoinRespawnName:SetText("复活")
+    --end
 
     self.WidgetSwitcher_Mode:SetActiveWidgetIndex(1)
     self.CountDownTipNameText:SetVisibility(ESlateVisibility.Collapsed)
@@ -154,15 +158,15 @@ function UGC_Countdown_Popups_UIBP:Expand()
 end
 
 function UGC_Countdown_Popups_UIBP:RefreshCountDown(CountDown)
-    if CountDown <= -1 then
-        self.WidgetSwitcher_Mode:SetActiveWidgetIndex(1)
-        self.CountDownTipNameText:SetVisibility(ESlateVisibility.Collapsed)
-        return
-    end
-
-    self.WidgetSwitcher_Mode:SetActiveWidgetIndex(0)
-    self.CountDownTipNameText:SetVisibility(ESlateVisibility.HitTestInvisible)
-    self.CountDownText:SetText(string.format("%dS", CountDown))
+    --if CountDown <= -1 then
+    --    self.WidgetSwitcher_Mode:SetActiveWidgetIndex(1)
+    --    self.CountDownTipNameText:SetVisibility(ESlateVisibility.Collapsed)
+    --    return
+    --end
+    --
+    --self.WidgetSwitcher_Mode:SetActiveWidgetIndex(0)
+    --self.CountDownTipNameText:SetVisibility(ESlateVisibility.HitTestInvisible)
+    --self.CountDownText:SetText(string.format("%dS", CountDown))
 end
 
 function UGC_Countdown_Popups_UIBP:OnCoinRespawnButtonClick()
@@ -229,5 +233,15 @@ function UGC_Countdown_Popups_UIBP:Button_No_OnClicked()
 	return nil;
 end
 
+---@private
+function UGC_Countdown_Popups_UIBP:OnClickRespawnBtn()
+    GameplayUtils.Print("UGC_Countdown_Popups_UIBP.OnClickRespawnBtn")
+    self:RequestRespawn(true)
+end
+
+---@private
+function UGC_Countdown_Popups_UIBP:OnClickBackToLobbyBtn()
+    GameplayUtils.Print("UGC_Countdown_Popups_UIBP.OnClickBackToLobbyBtn")
+end
 
 return UGC_Countdown_Popups_UIBP

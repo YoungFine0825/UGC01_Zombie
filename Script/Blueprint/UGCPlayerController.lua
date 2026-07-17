@@ -1,17 +1,25 @@
 ---@class UGCPlayerController_C:BP_UGCPlayerController_C
----@field BP_UGCBackpackUI BP_UGCBackpackUI_C
----@field BP_UGCBackpack BP_UGCBackpack_C
+---@field WeaponSystemComponent BP_PlayerControllerWeaponSystemComponent_C
+---@field PlayerInteractEntityComponent BP_PlayerInteractEntityComponent_C
+---@field ClientGameplayComponent BP_ClientGameplayComponent_C
 ---@field ShopV2Component ShopV2Component_C
 ---@field TalentTreeComponent TalentTreeComponent_C
 --Edit Below--
+--客户端侧gameplay相关子系统启动器
+---@type GameplayBooter
+local GameplayBooter = UGCGameSystem.UGCRequire("Script.Gameplay.GameplayBooter")
+GameplayBooter.Construct()
+
 UGCGameSystem.UGCRequire("Script.Blueprint.Arts_UI.Lobby.LobbyFlow")
 UGCGameSystem.UGCRequire("Script.Blueprint.Arts_UI.Game.UIBP.Breakthrough.BreakthroughManager")
 UGCGameSystem.UGCRequire("ExtendResource.ShopV2.OfficialPackage.".."Script.ShopV2.ShopV2Manager")
+
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 local UGCGameState = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameState')
 local PromiseFuture = require("common.PromiseFuture")
 local Delegate = require("common.Delegate")
 
+---@type UGCPlayerController_C
 local UGCPlayerController = {}
 
 UGCGameSystem.UGCRequire("Script.Blueprint.TimingListUtils")
@@ -59,6 +67,9 @@ function UGCPlayerController:ReceiveBeginPlay()
             self:HandleBeginPlayInServerForFighting()
         end
     else
+        --
+        GameplayBooter.BeginPlayOnClient()
+        --
         if UGCGameState.IsInLobby() then
             self:HandleBeginPlayInClientForLobby()
         else
@@ -170,11 +181,16 @@ function UGCPlayerController:RecievePawnReady()
     UGCGameSystem.SetPlayerRespawnInfo(PlayerKey, true,UGCActorComponentUtility.GetActorTransform(UGCGameSystem.GetPlayerPawnByPlayerController(self)):Copy())
 end
 
+function UGCPlayerController:ReceiveTick(DeltaTime)
+    GameplayBooter.OnTick(false,DeltaTime)
+end
+
 function UGCPlayerController:ReceiveEndPlay()
     if UGCGameSystem.IsServer() then
-        self:StopTryAddDefaultWeaponTimer()
         UGCGenericMessageSystem.UnListenMessage(self, UGCGenericMessageSystem.Messages.UGC.Player.PlayerEnter) 
         UGCGenericMessageSystem.UnListenMessage(self, UGCGenericMessageSystem.Messages.UGC.Player.PlayerExit) 
+    else
+        GameplayBooter.EndPlayOnClient()
     end
 end
 
@@ -251,6 +267,8 @@ function UGCPlayerController:RPC_Server_RespawnPlayer()
 
         PlayerState.AliveState = UGCGameData.AliveState.Alive
         UnrealNetwork.RepLazyProperty(PlayerState, "AliveState")
+
+        GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Server.OnPlayerAliveStateChanged,self,PlayerState.AliveState)
     end
 end
 
@@ -266,6 +284,7 @@ function UGCPlayerController:RPC_Server_RmoveItem(PC, CoinID, Num)
     BP_VirtualItemManager_GlobalActor:RemoveItem(PC, CoinID, Num)
 end
 
+---@public 打开复活界面
 function UGCPlayerController:OpenRespawnUI()
     if UGCGameSystem.IsServer() then
         return
@@ -487,7 +506,10 @@ function UGCPlayerController:OnRep_LobbyInfo()
     LobbyUtils.UpdateWidget(LobbyWidgetType.LWT_MainLobby, { ModeID = self.LobbyInfo.SelectedModeID, bIsMatching = self.LobbyInfo.bIsMatching })
 end
 
-function UGCPlayerController:ChangeState(State)
+---@public 改变玩家生命状态。仅限于服务端
+---@param State Gameplay.EPlayerAliveState
+function UGCPlayerController:ServerChangeState(NewState,PreviousState)
+    ---@type UGCPlayerState_C
     local PlayerState = UGCGameSystem.GetPlayerStateByPlayerController(self)
 
     if PlayerState == nil then
@@ -495,15 +517,29 @@ function UGCPlayerController:ChangeState(State)
         return
     end
 
-    PlayerState.AliveState = State
-    UnrealNetwork.RepLazyProperty(PlayerState, "AliveState")
+    PlayerState:ServerChangeAliveState(NewState)
 
-    if State == UGCGameData.AliveState.Dead then
-        UGCGameSystem.SetPlayerRespawnInfo(UGCGameSystem.GetPlayerKeyByPlayerController(self), true, UGCActorComponentUtility.GetActorTransform(UGCGameSystem.GetPlayerPawnByPlayerController(self)):Copy())
-        UGCGameSystem.GameState:OnPlayerDead(UGCGameSystem.GetPlayerKeyByPlayerController(self))
-    elseif State == UGCGameData.AliveState.Alive then
-        UGCGameSystem.GameState:OnPlayerAlive(UGCGameSystem.GetPlayerKeyByPlayerController(self))
+    --if NewState == EPlayerAliveState.Dead then
+    --    --UGCGameSystem.SetPlayerRespawnInfo(UGCGameSystem.GetPlayerKeyByPlayerController(self), true, UGCActorComponentUtility.GetActorTransform(UGCGameSystem.GetPlayerPawnByPlayerController(self)):Copy())
+    --    UGCPlayerPawnSystem.SetDefaultPlayerRespawnPointSelectionMethod(EUGCPlayerRespawnPointSelectionMethod.RespawnOnTheSpot)
+    --    UGCGameSystem.GameState:OnPlayerDead(UGCGameSystem.GetPlayerKeyByPlayerController(self))
+    --elseif NewState == EPlayerAliveState.Alive then
+    --    UGCGameSystem.GameState:OnPlayerAlive(UGCGameSystem.GetPlayerKeyByPlayerController(self))
+    --end
+
+    if NewState == EPlayerAliveState.Dead then
+        GameplaySystem.PlayerSystem:ServerEnableSpectating(self,true)
+    elseif NewState == EPlayerAliveState.Alive then
+        GameplaySystem.PlayerSystem:ServerEnableSpectating(self,false)
     end
+
+    GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Server.OnPlayerAliveStateChanged,self,NewState,PreviousState)
+end
+
+---@public
+---@return BP_ClientGameplayComponent_C
+function UGCPlayerController:GetClientGameplayComponent()
+    return self.ClientGameplayComponent
 end
 
 return UGCPlayerController

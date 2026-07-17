@@ -6,8 +6,8 @@ local EquipmentAffixManager = UGCGameSystem.UGCRequire("Script.Blueprint.Affix.E
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 local Depot_Attribute_Group_UIBP = { 
     bInitDoOnce = false,
-    Attribute_Number_WidgetPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Equip/Equip_AttributeNum_UIBP.Equip_AttributeNum_UIBP_C'),
-    Attribute_TextTips_WidgetPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Depot/Depot_Attribute_TextTips_UIBP.Depot_Attribute_TextTips_UIBP_C'),
+    Attribute_Number_WidgetPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Equip/Equip_AttributeNum_UIBP.Equip_AttributeNum_UIBP_C',
+    Attribute_TextTips_WidgetPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Depot/Depot_Attribute_TextTips_UIBP.Depot_Attribute_TextTips_UIBP_C',
  } 
 
 
@@ -46,7 +46,7 @@ end
 
 function Depot_Attribute_Group_UIBP:Add_Number_Widget(data)
     local pc = UGCGameSystem.GetLocalPlayerController();
-    local Number_WidgetUI_Class = UGCObjectUtility.LoadClass(self.Attribute_Number_WidgetPath)
+    local Number_WidgetUI_Class = UGCObjectUtility.LoadClass(UGCGameSystem.GetUGCResourcesFullPath(self.Attribute_Number_WidgetPath))
     local Number_WidgetUI = UserWidget.NewWidgetObjectBP(pc,Number_WidgetUI_Class)
     
     if Number_WidgetUI  then
@@ -69,7 +69,7 @@ end
 
 function Depot_Attribute_Group_UIBP:Add_TextTips_Widget(data)
     local pc = UGCGameSystem.GetLocalPlayerController();
-    local TextTips_WidgetUI_Class = UGCObjectUtility.LoadClass(self.Attribute_TextTips_WidgetPath)
+    local TextTips_WidgetUI_Class = UGCObjectUtility.LoadClass(UGCGameSystem.GetUGCResourcesFullPath(self.Attribute_TextTips_WidgetPath))
     local TextTips_WidgetUI = UserWidget.NewWidgetObjectBP(pc,TextTips_WidgetUI_Class)
     if TextTips_WidgetUI then
         self.VerticalBox_Attribute_TextTips:AddChildToVerticalBox(TextTips_WidgetUI)

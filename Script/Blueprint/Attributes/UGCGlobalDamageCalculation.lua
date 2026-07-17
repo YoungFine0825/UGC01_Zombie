@@ -1,8 +1,76 @@
+--[[
+    全局伤害计算公式
+
+---]]
 UGCGameSystem.UGCRequire('Script.GameAttribute.game_attribute_type')
 
 local UGCGlobalDamageCalculation = {}
 
+---伤害计算主入口
 function UGCGlobalDamageCalculation:GetCalculationResult(Context, ExtraResult)
+    local SourceMagnitude  = UGCAttributeSystem.GetSourceMagnitudeFromContext(Context)
+    if SourceMagnitude <= 0 then
+        return 0  -- PreOverrideDamage 已经阻止了伤害，不再计算
+    end
+    local RestrictedDamageType = UGCAttributeSystem.GetDamageTypeFromContext(Context)
+    local DamageTypeTags = UGCAttributeSystem.GetDamageTagsFromContext(Context)
+    local SourceObject          = UGCAttributeSystem.GetSourceObjectFromContext(Context)
+    local VictimActor           = UGCAttributeSystem.GetVictimFromContext(Context)      --受害者
+    local Causer                = UGCAttributeSystem.GetCauserFromContext(Context)      --枪等武器或者人(空手情况)
+    local InstigatorController  = UGCAttributeSystem.GetInstigatorFromContext(Context)  --攻击者的Controller
+    local CauserActor           = InstigatorController:K2_GetPawn()           --攻击者角色
+
+    local print = GameplayUtils.Print
+    print("[UGCGlobalDamageCalculation] Context CauserActor --->"..(CauserActor.PlayerName and CauserActor.PlayerName or tostring(CauserActor)))
+    print("[UGCGlobalDamageCalculation] Context Causer --->",GameplayUtils.GetUEObjClassName(Causer))
+    print("[UGCGlobalDamageCalculation] Context SrcMagnitude --->"..tostring(SourceMagnitude))
+    print("[UGCGlobalDamageCalculation] Context RestrictedDamageType --->"..tostring(RestrictedDamageType))
+    print("[UGCGlobalDamageCalculation] Context DamageTypeTags --->"..tostring(DamageTypeTags))
+
+    --local CauserHeadDamageRatio = UGCAttributeSystem.GetGameAttributeValue(CauserActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_HeadDamageBoost) --爆头伤害加成
+
+    --local TargetDefence = UGCAttributeSystem.GetGameAttributeValue(VictimActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_Defence) --防御
+    --local TargetHeadDefenceRatio = UGCAttributeSystem.GetGameAttributeValue(VictimActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_HeadDamageResist) --爆头伤害减少
+
+    local existedTags = {}
+    for k, TagName in pairs(Context.DamageTypeTags) do
+        print("[UGCGlobalDamageCalculation] DamageTypeTags[",k,"]  ",TagName)
+        existedTags[TagName] = true
+    end
+
+
+    local BoneDamageBoost = 1-- 部位伤害比例加成
+    local UpgradeDamageBoost = 1--枪械升级后伤害加成
+    local PerkDamageBoost = 1--技能包含的伤害加成
+    if RestrictedDamageType == ERestrictedDamageType.ShootDamage then
+        if self:IsHeadDamage(Context) then
+            --根据枪械类型不同，爆头伤害加成不同
+            if existedTags["WeaponDamageTypes.WeaponBase.Pistol"] then--手枪
+                BoneDamageBoost = 2
+            elseif existedTags["WeaponDamageTypes.WeaponBase.Rife"] then--步枪
+                BoneDamageBoost = 4
+            elseif existedTags["WeaponDamageTypes.WeaponBase.ShotGun"] then--霰弹枪
+                BoneDamageBoost = 2
+            elseif existedTags["WeaponDamageTypes.WeaponBase.Sniper"] then--狙击枪
+                BoneDamageBoost = 8
+            elseif existedTags["WeaponDamageTypes.WeaponBase.SniperRifle"] then--射手步枪
+                BoneDamageBoost = 8
+            elseif existedTags["WeaponDamageTypes.WeaponBase.MachineGun"] then--机枪
+                BoneDamageBoost = 3
+            elseif existedTags["WeaponDamageTypes.WeaponBase.SubmachineGun"] then--冲锋枪
+                BoneDamageBoost = 4
+            end
+        end
+    elseif RestrictedDamageType == ERestrictedDamageType.MeleeDamage then
+        SourceMagnitude = 30--近战伤害固定
+    end
+
+    local FinalDamage = SourceMagnitude * BoneDamageBoost * UpgradeDamageBoost * PerkDamageBoost
+    print("[UGCGlobalDamageCalculation] Params: FinalDamage: ",FinalDamage)
+    return FinalDamage
+end
+
+function UGCGlobalDamageCalculation:GetCalculationResult_Legcy(Context, ExtraResult)
     -- ugcprint("[UGCGlobalDamageCalculation] Context instigator --->"..tostring(Context.Instigator))
     local RestrictedDamageType = UGCAttributeSystem.GetDamageTypeFromContext(Context)
     local DamageTypeTags = UGCAttributeSystem.GetDamageTagsFromContext(Context)

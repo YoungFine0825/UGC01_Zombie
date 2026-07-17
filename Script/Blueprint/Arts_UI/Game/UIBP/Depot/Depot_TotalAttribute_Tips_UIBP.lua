@@ -9,7 +9,7 @@ local EquipmentAffixManager = UGCGameSystem.UGCRequire("Script.Blueprint.Affix.E
 local Depot_TotalAttribute_Tips_UIBP = 
 { 
     bInitDoOnce = false;
-    Attribute_Number_WidgetPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Equip/Equip_AttributeNum_UIBP.Equip_AttributeNum_UIBP_C'),
+    Attribute_Number_WidgetPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Equip/Equip_AttributeNum_UIBP.Equip_AttributeNum_UIBP_C',
 } 
 
 
@@ -36,7 +36,7 @@ end
 
 function Depot_TotalAttribute_Tips_UIBP:Add_Number_Widget(data)
     local pc = UGCGameSystem.GetLocalPlayerController();
-    local Number_WidgetUI_Class = UGCObjectUtility.LoadClass(self.Attribute_Number_WidgetPath)
+    local Number_WidgetUI_Class = UGCObjectUtility.LoadClass(UGCGameSystem.GetUGCResourcesFullPath(self.Attribute_Number_WidgetPath))
     local Number_WidgetUI = UserWidget.NewWidgetObjectBP(pc,Number_WidgetUI_Class)
     
     if Number_WidgetUI  then

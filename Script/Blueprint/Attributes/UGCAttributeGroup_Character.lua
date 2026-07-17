@@ -1,4 +1,4 @@
----@class UGCAttributeGroup_C:GameAttributeGroup
+---@class UGCAttributeGroup_Character_C:GameAttributeGroup
 --Edit Below--
 local UGCAttributeGroup_Character = {}
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')

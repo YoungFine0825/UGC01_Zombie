@@ -1,9 +1,12 @@
 ---@class UGCPlayerState_C:BP_UGCPlayerState_C
+---@field WeaponSystemComponent BP_PlayerStateWeaponSystemComponent_C
+---@field PlayerInGameStatDataComponent BP_PlayerInGameStatDataComponent_C
 ---@field PlayerExp int32
 ---@field UGCPlayerLevel int32
 --Edit Below--
 local Delegate = require("common.Delegate")
 local PromiseFuture = require("common.PromiseFuture")
+---@type UGCPlayerState_C
 local UGCPlayerState = {
     -- 玩家等级变化委托，当玩家等级同步时触发（客户端）
     PlayerLevelChangedDelegate = Delegate.New(),
@@ -13,16 +16,23 @@ local UGCPlayerState = {
     PlayerGameGameRecordDataDelegate = Delegate.New(),
     -- 游戏记录数据表，存储玩家游戏过程中的各种统计数据
     GameRecordData = {},
-    -- 游戏完成记录表，存储玩家已解锁的游戏模式
+    --弃用 游戏完成记录表，存储玩家已解锁的游戏模式
     GameCompletionRecord = {},
 }
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 local UGCGameState = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameState')
 UGCPlayerState.RespawnConfig = {}
+
+---@type Gameplay.PlayerGameRecordData
 UGCPlayerState.GameRecordData = {
-    LevelInfo = {},                      -- 每个关卡的分数
+    TotalScore = 0,                       --积分点数
+    TotalKill = 0,--击杀数
+    TotalHeadshot = 0,--爆头数
     TotalDamage = 0,                     -- 总伤害
+    ---- 旧字段
+    LevelInfo = {},                      -- 每个关卡的分数
     TotalMonsterKill = 0,                -- 总击杀怪物
+    TotalMonsterHeadshot = 0,
     TotalMonsterKillByType = {           -- 击杀不同类型的怪物
         Monster = 0,                     -- 普通怪物
         EliteMonster = 0,                -- 精英怪物
@@ -42,7 +52,8 @@ UGCPlayerState.GameRecordData = {
 UGCPlayerState.SettleParams = {}
 UGCPlayerState.SettleParams.bIsSettled = false  -- 标记当前是否已结算
 UGCPlayerState.SettleParams.bIsFinished = true  -- 标记结算时流程是否已完成（是否胜利）
-UGCPlayerState.IsModeUnLock = false  -- 标记模式是否已解锁
+UGCPlayerState.IsModeUnLock = true  -- 模式默认全部解锁 by yangfan
+
 --判断玩家所处的状态（Alive、Dying、Dead）
 UGCPlayerState.AliveState = UGCGameData.AliveState.Alive;
 
@@ -59,6 +70,12 @@ UGCPlayerState.bIsPlayerInPortalDoor = false
 UGCPlayerState.bIsOnline = true 
 
 UGCPlayerState.bIsLobbyTeamLeader = false
+
+UGCPlayerState.DyingInfo = {
+    EndTime = 0,
+    RemainingTime = 0,
+    bEnabled = false,
+}
 
 function UGCPlayerState:GetReplicatedProperties()
     return {"RespawnConfig", "Lazy"}, {"HeroID", "Lazy"}, {"GameRecordData", "Lazy"}, {"GameCompletionRecord", "Lazy"},
@@ -128,9 +145,6 @@ function UGCPlayerState:HandleBeginPlayInServer()
     self.RespawnConfig = UGCGameData.GetRespawnConfig(UGCMultiMode.GetModeID())
     UnrealNetwork.RepLazyProperty(self, "RespawnConfig")
 
-    -- 初始化暂时无法通
-    self:InitGameGameRecordData()
-
     --绑定小怪事件
     local Msg3 = UGCGenericMessageSystem.Messages.UGC.MobPawn.PostTakeDamage
     local Msg4 = UGCGenericMessageSystem.Messages.UGC.MobPawn.PostBeKilled
@@ -160,27 +174,15 @@ function UGCPlayerState:OnSpawnOrRespawn()
     if UGCGameSystem.IsServer() then
         ugcprint("[UGCPlayerState:OnSpawnOrRespawn] Called")
 
-        -- self:InitGameCompletionRecord()
-
         local Uid = UGCGameSystem.GetUIDByPlayerState(self)
-        local Data = UGCPlayerStateSystem.GetPlayerArchiveData(Uid)
-        ugcprint("[UGCPlayerState] Data: " .. tostring(Data))
-        if not Data then
-            Data = {}
-        end
+        local Data = GameplaySystem.PlayerSystem:ServerGetPlayerGameProfile(Uid)
         self.CustomData = Data
 
         -- 获取英雄配置
-        local ModeID = UGCMultiMode.GetModeID()
-        if ModeID == 1001 then
+        if GameplaySystem.IsInLobby() then
             -- 大厅逻辑
-            -- self.GameCompletionRecord = self.CustomData.GameCompletionRecord
-            -- UnrealNetwork.RepLazyProperty(self, "GameCompletionRecord")
-            print("[UGCPlayerState:OnSpawnOrRespawn]:初始游戏完成记录:")
-            log_tree(Data.GameCompletionRecord)
         else
             -- 局内逻辑
-            self:InitTalentTree()
         end
     end
 end
@@ -194,14 +196,7 @@ function UGCPlayerState:OnPlayerEnter(_,PlayerKey)
     UnrealNetwork.RepLazyProperty(self, "bIsOnline")
 
     local Uid = UGCGameSystem.GetUIDByPlayerState(self)
-    local Data = UGCPlayerStateSystem.GetPlayerArchiveData(Uid)
-    ugcprint("[UGCPlayerState] Data: "..tostring(Data))
-    if not Data then
-        Data = {}
-    end
-    if not Data.UGCPlayerLevel or Data.UGCPlayerLevel <= 0 then
-        Data.UGCPlayerLevel = 1
-    end
+    local Data = GameplaySystem.PlayerSystem:ServerGetPlayerGameProfile(Uid)
     self.CustomData = Data
     self.PlayerExp = Data.PlayerExp
     self.UGCPlayerLevel = Data.UGCPlayerLevel
@@ -210,17 +205,16 @@ function UGCPlayerState:OnPlayerEnter(_,PlayerKey)
     ugcprint("[UGCPlayerState] Init Level: "..tostring(self.UGCPlayerLevel))
     ugcprint("[UGCPlayerState] Init Exp: "..tostring(self.PlayerExp))
 
-    self:InitGameCompletionRecord()
-
     -- 英雄选择
     local ModeID = UGCMultiMode.GetModeID()
-    if self:ReadHeroID() == nil then self:SaveHeroID(HeroSelectionManager:GetFirstAvailableHeroID()) end
+    if self:ReadHeroID() < 0 then self:SaveHeroID(HeroSelectionManager:GetFirstAvailableHeroID()) end
     if UGCGameData.GetGameModeName(ModeID) == UGCGameData.ModeName.Lobby then
         local function SelectHeroFromArchiveData()
             local PlayerKey = UGCGameSystem.GetPlayerKeyByPlayerState(self)
-            if HeroSelectionManager:GetSelectedHeroID(PlayerKey) ~= self:ReadHeroID() then
-                HeroSelectionManager:SelectHero(PlayerKey, self:ReadHeroID())
-            end
+            --if HeroSelectionManager:GetSelectedHeroID(PlayerKey) ~= self:ReadHeroID() then
+            --    HeroSelectionManager:SelectHero(PlayerKey, self:ReadHeroID())
+            --end
+            HeroSelectionManager:SelectHero(PlayerKey, self:ReadHeroID())
         end
 
         HeroSelectionManager.OnHeroSelected:Add(function (PlayerKey, HeroID)
@@ -260,33 +254,25 @@ function UGCPlayerState:OnPlayerReconnect(_, PlayerKey)
 end
 
 function UGCPlayerState:InitGameGameRecordData()
-
-    PromiseFuture.New():Set(
-        function (PromiseFuture)
-            while true do
-                local TotalLevelCount = UGCLevelFlowSystem.GetTotalLevelCount()
-                if TotalLevelCount then
-                    for i = 1, TotalLevelCount do
-                        self.GameRecordData.LevelInfo[i] = {
-                            LevelDamage = 0,                 -- 该关卡总伤害
-                            LevelMonsterKill = 0,            -- 该关卡总击杀怪物
-                            LevelMonsterKillByType = {       -- 击杀不同类型的怪物
-                                Monster = 0,                 -- 普通怪物
-                                EliteMonster = 0,            -- 精英怪物
-                                Boss = 0                     -- BOSS
-                            },
-                            LevelPlayerExp = 0,              -- 该关卡总经验
-                            LevelTime = 0,                   -- 该关卡游戏时间
-                            LevelCriticalHit = 0             -- 该关卡总暴击
-                        }
-                    end
-                    UnrealNetwork.RepLazyProperty(self, "GameRecordData")
-                    return
-                end
-                PromiseFuture:Yield()
-            end
+    local TotalLevelCount = UGCLevelFlowSystem.GetTotalLevelCount()
+    if TotalLevelCount then
+        for i = 1, TotalLevelCount do
+            self.GameRecordData.LevelInfo[i] = {
+                LevelDamage = 0,                 -- 该关卡总伤害
+                LevelMonsterKill = 0,            -- 该关卡总击杀怪物
+                LevelMonsterKillByType = {       -- 击杀不同类型的怪物
+                    Monster = 0,                 -- 普通怪物
+                    EliteMonster = 0,            -- 精英怪物
+                    Boss = 0                     -- BOSS
+                },
+                LevelPlayerExp = 0,              -- 该关卡总经验
+                LevelTime = 0,                   -- 该关卡游戏时间
+                LevelCriticalHit = 0             -- 该关卡总暴击
+            }
         end
-    ):AutoResume(self, 0.2, 5)
+        UnrealNetwork.RepLazyProperty(self, "GameRecordData")
+        return
+    end
 end
 
 function UGCPlayerState:ApplyHeroSelectionAndTalentSkill()
@@ -306,113 +292,35 @@ function UGCPlayerState:ApplyHeroSelectionAndTalentSkill()
     end
 end
 
-function UGCPlayerState:InitTalentTree()
-    local UID = UGCGameSystem.GetUIDByPlayerState(self)
-    local PlayerData = UGCPlayerStateSystem.GetPlayerArchiveData(UID)
-
-    if PlayerData == nil then
-        ugcprint(string.format("[TalentTree] UGCPlayerState: UID: %d PlayerData is empty, creating new one.", UID))
-        PlayerData = {
-            TalentTree = {
-                GeneralTalentInfo = {},    -- 通用天赋列表，{TalentID, Level}
-                HeroTalentInfo = {},       -- 所有英雄天赋，HeroID -> {TalentID, Level}天赋列表的映射
-                SelectedHeroID = 0,       -- 当前选择的英雄ID
-                TalentPoints = 0,         -- 玩家剩余的天赋点
-            }
-        }
-    end
-
-    if PlayerData["TalentTree"] == nil then
-        PlayerData["TalentTree"] = {
-            GeneralTalentInfo = {},    -- 通用天赋列表，{TalentID, Level}
-            HeroTalentInfo = {},       -- 所有英雄天赋，HeroID -> {TalentID, Level}天赋列表的映射
-            SelectedHeroID = 0,       -- 当前选择的英雄ID
-            TalentPoints = 0,         -- 玩家剩余的天赋点
-        }
-    end
-
-    ugcprint("[TalentTree] Init PlayerState")
-
-    local TalentDataParams = {
-        ETalentDataParams.Buffs ,
-        ETalentDataParams.Skills,
-        ETalentDataParams.Attributes
-    }
-
-    TalentTreeManager:UpdateCachedVariables()
-
-    for _, talent in ipairs(PlayerData["TalentTree"].GeneralTalentInfo) do
-        local TalentID = talent[1]
-        TalentTreeManager:ApplyTalents(TalentDataParams, TalentID)
-    end
-
-    local SelectedHeroTalentInfo = PlayerData["TalentTree"].HeroTalentInfo[PlayerData["TalentTree"].SelectedHeroID]
-    if SelectedHeroTalentInfo then
-        for _, talent in ipairs(SelectedHeroTalentInfo) do
-            local TalentID = talent[1]
-            TalentTreeManager:ApplyTalents(TalentDataParams, TalentID)
-        end
-    end
-end
-
-function UGCPlayerState:InitGameCompletionRecord()
-    ugcprint("[UGCPlayerState] InitGameCompletionRecord")
-    local UID = UGCGameSystem.GetUIDByPlayerState(self)
-    local PlayerData = UGCPlayerStateSystem.GetPlayerArchiveData(UID)
-
-    if PlayerData == nil then
-        PlayerData = {}
-    end
-
-    -- 必须解锁的关卡列表
-    local requiredLevels = {1001, 1002, 1005, 1008, 1011, 1014}
-    
-    -- 初始化或合并存档数据
-    PlayerData.GameCompletionRecord = PlayerData.GameCompletionRecord or {}
-    
-    -- 创建哈希表用于快速查找已存在关卡
-    local existingLevels = {}
-    for _, level in ipairs(PlayerData.GameCompletionRecord) do
-        existingLevels[level] = true
-    end
-    
-    -- 添加缺失的必须关卡
-    for _, level in ipairs(requiredLevels) do
-        if not existingLevels[level] then
-            table.insert(PlayerData.GameCompletionRecord, level)
-            existingLevels[level] = true  -- 更新哈希表防止重复插入
-        end
-    end
-    
-    print("[UGCPlayerState:InitGameCompletionRecord]:最终游戏完成记录:")
-    log_tree(PlayerData.GameCompletionRecord)
-    self.GameCompletionRecord = PlayerData.GameCompletionRecord
-    UnrealNetwork.RepLazyProperty(self, "GameCompletionRecord")
-    UGCPlayerStateSystem.SavePlayerArchiveData(UID, PlayerData)
-    
-end
-
 function UGCPlayerState:OnMobPawnTakeDamage(MobPawn, DamageCauser, EventInstigator, Damage, DamageContext)
     if EventInstigator and EventInstigator.PlayerState == self then
-        ugcprint("UGCPlayerState:OnMobPawnTakeDamage")
-        self:UpdateGameRecordData_MonsterTakeDamage(Damage)
-        ugcprint("[UGCPlayerState] OnMobPawnTakeDamage: log_tree ResultTags")
-        for k, v in pairs(DamageContext.ResultTags) do
-            ugcprint("[UGCPlayerState] OnMobPawnTakeDamage: log_tree ResultTags: "..tostring(k).." "..tostring(v));    
+        GameplayUtils.Print("UGCPlayerState。OnMobPawnTakeDamage： ",Damage)
+        local dmgPosition = UGCAttributeSystem.GetDamagePositionTypeFromContext(DamageContext)
+        local isDead = UGCAttributeSystem.GetGameAttributeValue(MobPawn,"Health") <= 0
+        local score = GameplaySystem.PlayerSystem:CalcuZombieDamageScore(MobPawn,Damage,DamageContext)
+        local statComponent = self:GetInGameStatDataComponent()
+        statComponent:AddStatData(EPlayerInGameStatKeys.TotalDamage,Damage)
+        statComponent:AddStatData(EPlayerInGameStatKeys.TotalScore,score)
+        --通知客户端玩家得分
+        GameplaySystem.PlayerRPC:S2C_OnGainScore(EventInstigator,score,dmgPosition)
+        --
+        local isHeadshot = dmgPosition == EAvatarDamagePosition.BigHead
+        if isHeadshot and isDead then
+            GameplayUtils.Print("UGCPlayerState.OnMobPawnTakeDamage: 爆头击杀+1")
+            statComponent:AddStatData(EPlayerInGameStatKeys.TotalHeadshot,1)
         end
-        if DamageContext.ResultTags:IsValidIndex(DamageContext.ResultTags:Find("UGC.Damage.Result.Critical")) then
-            self.GameRecordData.TotalCriticalHit = self.GameRecordData.TotalCriticalHit + Damage
-            ugcprint("[UGCPlayerState] TotalCriticalHit: "..tostring(self.GameRecordData.TotalCriticalHit))
-            UnrealNetwork.RepLazyProperty(self, "GameRecordData")
-        end
+
+        --通知客户端，丧尸被击中
+        GameplaySystem.PlayerRPC:S2C_OnHitZombie(EventInstigator,MobPawn,dmgPosition,isDead)
+
     else
-        ugcprint("OnMobPawnTakeDamage EventInstigator is not self")
+        GameplayUtils.Print("UGCPlayerState.OnMobPawnTakeDamage: EventInstigator is not self")
     end
 end
 
 function UGCPlayerState:OnMobPawnBeKill(MobPawn, Killer)
-    if Killer and Killer.PlayerState == self and MobPawn.MonsterType ~= nil then
-        ugcprint("UGCPlayerState:OnMobPawnBeKill MonsterType="..tostring(MobPawn.MonsterType))
+    if Killer and Killer.PlayerState == self then
+        GameplayUtils.Print("UGCPlayerState.OnMobPawnBeKill")
         self:UpdateGameRecordData_MonsterKilled(MobPawn.MonsterType)
     end
 end
@@ -423,43 +331,11 @@ function UGCPlayerState:UpdateCurrentStage(CurrentStage)
     UnrealNetwork.RepLazyProperty(self, "GameRecordData")
 end
 
-function UGCPlayerState:UpdateGameRecordData_MonsterTakeDamage(Damage)
-    local LevelIndex = UGCLevelFlowSystem.GetCurrentLevelStage(UGCActorComponentUtility.GetOwner(self))
-    ugcprint("UGCPlayerState:UpdateGameGameRecordData_MonsterTakeDamage LevelIndex="..tostring(LevelIndex))
-
-    self.GameRecordData.TotalDamage = self.GameRecordData.TotalDamage + Damage
-    if LevelIndex ~= nil then
-        self.GameRecordData.LevelInfo[LevelIndex].LevelDamage = self.GameRecordData.LevelInfo[LevelIndex].LevelDamage + Damage
-    end
-
-    UnrealNetwork.RepLazyProperty(self, "GameRecordData")
-end
-
+---@protected
 function UGCPlayerState:UpdateGameRecordData_MonsterKilled(MonsterType)
 
-    self.GameRecordData.TotalMonsterKill = self.GameRecordData.TotalMonsterKill + 1
-    if MonsterType == "Monster"  then
-        self.GameRecordData.TotalMonsterKillByType.Monster = self.GameRecordData.TotalMonsterKillByType.Monster + 1
-    elseif MonsterType == "EliteMonster" then
-        self.GameRecordData.TotalMonsterKillByType.EliteMonster = self.GameRecordData.TotalMonsterKillByType.EliteMonster + 1
-    elseif MonsterType == "Boss" then
-        self.GameRecordData.TotalMonsterKillByType.Boss = self.GameRecordData.TotalMonsterKillByType.Boss + 1
-    end
-
-    local LevelIndex = UGCLevelFlowSystem.GetCurrentLevelStage(UGCActorComponentUtility.GetOwner(self))
-    ugcprint("UGCPlayerState:UpdateGameGameRecordData_MonsterKilled LevelIndex="..tostring(LevelIndex))
-    if LevelIndex ~= nil then
-        self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKill = self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKill + 1
-        if MonsterType == "Monster"  then
-            self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKillByType.Monster = self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKillByType.Monster + 1
-        elseif MonsterType == "EliteMonster" then
-            self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKillByType.EliteMonster = self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKillByType.EliteMonster + 1
-        elseif MonsterType == "Boss" then
-            self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKillByType.Boss = self.GameRecordData.LevelInfo[LevelIndex].LevelMonsterKillByType.Boss + 1
-        end
-    end
-
-    UnrealNetwork.RepLazyProperty(self, "GameRecordData")
+    local statComponent = self:GetInGameStatDataComponent()
+    statComponent:AddStatData(EPlayerInGameStatKeys.TotalKill,1)
 end
 
 function UGCPlayerState:SetLobbyReadyStatus(bIsReady)
@@ -519,20 +395,18 @@ function UGCPlayerState:AddExp(Delta)
     end
 
     -- 存储数据
-    local uid = UGCGameSystem.GetUIDByPlayerState(self)
     self.CustomData.PlayerExp = self.PlayerExp
     self.CustomData.UGCPlayerLevel = self.UGCPlayerLevel
-    UGCPlayerStateSystem.SavePlayerArchiveData(uid, self.CustomData)
+    GameplaySystem.PlayerSystem:ServerSavePlayerGameProfileByPlayerState(self, self.CustomData)
 
     if LevelUp then
         self.OnLevelChanged:Broadcast(InitialLevel, self.UGCPlayerLevel)
-
     end
 end
 
 function UGCPlayerState:ReadHeroID()
     assert(UGCActorComponentUtility.HasAuthority(self))
-    local PlayerData = UGCPlayerStateSystem.GetPlayerArchiveData(UGCGameSystem.GetUIDByPlayerState(self))
+    local PlayerData = GameplaySystem.PlayerSystem:ServerGetPlayerGameProfileByPlayerState(self)
     ugcprint("[UGCPlayerState] ReadHeroID: " .. tostring(PlayerData.HeroID))
     return PlayerData.HeroID
 end
@@ -540,9 +414,9 @@ end
 function UGCPlayerState:SaveHeroID(HeroID)
     assert(UGCActorComponentUtility.HasAuthority(self))
     ugcprint("[UGCPlayerState] SaveHeroID: " .. tostring(HeroID))
-    local PlayerData = UGCPlayerStateSystem.GetPlayerArchiveData(UGCGameSystem.GetUIDByPlayerState(self))
+    local PlayerData = GameplaySystem.PlayerSystem:ServerGetPlayerGameProfileByPlayerState(self)
     PlayerData.HeroID = HeroID
-    UGCPlayerStateSystem.SavePlayerArchiveData(UGCGameSystem.GetUIDByPlayerState(self), PlayerData)
+    GameplaySystem.PlayerSystem:ServerSavePlayerGameProfileByPlayerState(self,PlayerData)
 end
 
 function UGCPlayerState:ModifyLevel(NewLevel)
@@ -567,10 +441,9 @@ function UGCPlayerState:ModifyLevel(NewLevel)
      end
 
      -- 存储数据
-     local uid = UGCGameSystem.GetUIDByPlayerState(self)
      self.CustomData.PlayerExp = self.PlayerExp
      self.CustomData.UGCPlayerLevel = self.UGCPlayerLevel
-     UGCPlayerStateSystem.SavePlayerArchiveData(uid, self.CustomData)
+     GameplaySystem.PlayerSystem:ServerSavePlayerGameProfileByPlayerState(self, self.CustomData)
 
     ugcprint(string.format("[UGCPlayerState] Level OnLevelChanged, Initial Level = %s, Current Level = %s: ", InitialLevel, self.UGCPlayerLevel))
     self.OnLevelChanged:Broadcast(InitialLevel, self.UGCPlayerLevel)
@@ -628,7 +501,7 @@ function UGCPlayerState:OnRep_UGCPlayerLevel()
 end
 
 function UGCPlayerState:OnRep_GameRecordData()
-    ugcprint("[UGCPlayerState] OnRep_GameRecordData"..tostring(self.GameRecordData.TotalCriticalHit))
+    ugcprint("[UGCPlayerState] OnRep_GameRecordData")
     self.PlayerGameGameRecordDataDelegate(self.GameRecordData)
     if self.SettleParams.bIsSettled then
         BreakthroughManager:RefreshBattleResultUI()
@@ -710,25 +583,43 @@ function UGCPlayerState:OnRep_SettleParams()
     end
 end
 
+---@public
+---@param newState Gameplay.EPlayerAliveState
+function UGCPlayerState:ServerChangeAliveState(newState)
+    self.AliveState = newState
+    UnrealNetwork.RepLazyProperty(self, "AliveState")
+end
+
 function UGCPlayerState:OnRep_AliveState()
+    ---@type UGCPlayerController_C
     local PC = UGCGameSystem.GetPlayerControllerByPlayerState(self)
     if not PC then
-        ugcprint("OnRep_AliveState: PC is nil")
+        --变化的是其他玩家，跳过
+        GameplayUtils.Print("UGCPlayerState.OnRep_AliveState: 其他玩家生存状态发生变化: ",self.AliveState)
         return
     end
-    if self.AliveState == UGCGameData.AliveState.Dying then
-        PC:OpenRespawnUI()
-    elseif self.AliveState == UGCGameData.AliveState.Dead then
-        PC:OpenRespawnUI()
-    elseif self.AliveState == UGCGameData.AliveState.Alive then
-        BreakthroughManager:CloseRespawnUI()
-    end
+    GameplayUtils.Print("UGCPlayerState.OnRep_AliveState: 本地玩家生存状态发生变化: ",self.AliveState)
+    --if self.AliveState == UGCGameData.AliveState.Dying then
+    --    PC:OpenRespawnUI()
+    --elseif self.AliveState == UGCGameData.AliveState.Dead then
+    --    PC:OpenRespawnUI()
+    --elseif self.AliveState == UGCGameData.AliveState.Alive then
+    --    BreakthroughManager:CloseRespawnUI()
+    --end
+
+    GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Client.OnLocalPlayerAliveStateChanged,self.AliveState)
 end
 
 function UGCPlayerState:ReceiveEndPlay()
     if UGCGameSystem.IsServer() then
         self:UpdateGameTime()
     end
+end
+
+---@public
+---@return BP_PlayerInGameStatDataComponent_C
+function UGCPlayerState:GetInGameStatDataComponent()
+    return self.PlayerInGameStatDataComponent
 end
 
 return UGCPlayerState

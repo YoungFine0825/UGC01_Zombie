@@ -5,9 +5,9 @@ UserWidget = UserWidget == nil and nil or UserWidget
 BreakthroughManager = BreakthroughManager or 
 {   
     WidgetPath = {
-        RespawnUIPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Breakthrough/UGC_Countdown_Popups_UIBP.UGC_Countdown_Popups_UIBP_C'),
-        ResultUIPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Breakthrough/Breakthrough_Result_UIBP.Breakthrough_Result_UIBP_C'),
-        TipsUIPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Breakthrough/UGC_Result_MoreTips_UIBP.UGC_Result_MoreTips_UIBP_C'),
+        RespawnUIPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Breakthrough/UGC_Countdown_Popups_UIBP.UGC_Countdown_Popups_UIBP_C',
+        ResultUIPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Breakthrough/Breakthrough_Result_UIBP.Breakthrough_Result_UIBP_C',
+        TipsUIPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Breakthrough/UGC_Result_MoreTips_UIBP.UGC_Result_MoreTips_UIBP_C',
     },
     ResultPlayerState = {}
 }
@@ -19,7 +19,7 @@ function BreakthroughManager:OpenRespawnUI(ModeID)
             self.RespawnUI:SetVisibility(ESlateVisibility.SelfHitTestInvisible)
         else
             print("[BreakthroughManager:OpenRespawnUI]: OpenRespawnUI")
-            self.RespawnUI = self:OpenMainUI(self.WidgetPath.RespawnUIPath)
+            self.RespawnUI = self:OpenMainUI(UGCGameSystem.GetUGCResourcesFullPath(self.WidgetPath.RespawnUIPath))
             local AnchorData = UGCObjectUtility.NewStruct("AnchorData")
             local Anchors = UGCObjectUtility.NewStruct("Anchors");
             Anchors.Minimum = Vector2D.New(0, 0);
@@ -53,7 +53,7 @@ function BreakthroughManager:ShowMoreTips(MoreData)
         self.TipsUI_BP:LuaInit()
         self.TipsUI_BP:SetVisibility(ESlateVisibility.SelfHitTestInvisible)
     else
-        self.TipsUI_BP = self:OpenMainUI(self.WidgetPath.TipsUIPath)
+        self.TipsUI_BP = self:OpenMainUI(UGCGameSystem.GetUGCResourcesFullPath(self.WidgetPath.TipsUIPath))
     end
     local AnchorData = UGCObjectUtility.NewStruct("AnchorData")
     local Anchors = UGCObjectUtility.NewStruct("Anchors");
@@ -72,7 +72,7 @@ function BreakthroughManager:OpenBattleResultUI(ModeID,State,IsShowUnlock)
             self.Battle_MainUI_BP:LuaInit()
             self.Battle_MainUI_BP:SetVisibility(ESlateVisibility.SelfHitTestInvisible)
         else
-            self.Battle_MainUI_BP = self:OpenMainUI(self.WidgetPath.ResultUIPath) 
+            self.Battle_MainUI_BP = self:OpenMainUI(UGCGameSystem.GetUGCResourcesFullPath(self.WidgetPath.ResultUIPath))
         end
         local AnchorData = UGCObjectUtility.NewStruct("AnchorData")
         local Anchors = UGCObjectUtility.NewStruct("Anchors");

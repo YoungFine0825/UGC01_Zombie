@@ -7,8 +7,8 @@
 --Edit Below--
 local Depot_Attribute_Group_UIBP = { 
     bInitDoOnce = false,
-    Attribute_WidgetPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Depot/Depot_Attribute_Group_UIBP.Depot_Attribute_Group_UIBP_C'),
-    Attribute_Extra_WidgetPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Equip/Equip_AttributeDescribe_UIBP.Equip_AttributeDescribe_UIBP_C'),
+    Attribute_WidgetPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Depot/Depot_Attribute_Group_UIBP.Depot_Attribute_Group_UIBP_C',
+    Attribute_Extra_WidgetPath = 'Asset/Blueprint/Arts_UI/Game/UIBP/Equip/Equip_AttributeDescribe_UIBP.Equip_AttributeDescribe_UIBP_C',
  } 
 
 
@@ -38,7 +38,7 @@ function Depot_Attribute_Group_UIBP:Add_Number_And_Tips_Widget(Data)
     local Attribute_Slot = WidgetLayoutLibrary.SlotAsVerticalBoxSlot(self.VerticalBox_Attribute)
     Attribute_Slot:SetPadding({ Left = 0, Right = 0, Bottom = 0, Top = 10 })
     local pc = UGCGameSystem.GetLocalPlayerController();
-    local Attribute_WidgetPath_Class = UGCObjectUtility.LoadClass(self.Attribute_WidgetPath)
+    local Attribute_WidgetPath_Class = UGCObjectUtility.LoadClass(UGCGameSystem.GetUGCResourcesFullPath(self.Attribute_WidgetPath))
     local Attribute_WidgetUI = UserWidget.NewWidgetObjectBP(pc,Attribute_WidgetPath_Class);
     Attribute_WidgetUI:SetVisibility(ESlateVisibility.SelfHitTestInvisible)
     if Attribute_WidgetUI and Attribute_WidgetUI.InitData ~= nil and type(Attribute_WidgetUI.InitData) == "function" then

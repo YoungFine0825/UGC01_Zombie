@@ -206,20 +206,6 @@ function LobbyModel:GetCurrentSelectedDifficulty()
 end
 
 function LobbyModel:IsModeLocked(ModeID)
-    local TargetModeID = ModeID or self:GetCurrentSelectedModeID()
-
-    local PlayerState = UGCGameSystem.GetLocalPlayerState()
-    local GameCompletionRecord = PlayerState.GameCompletionRecord or {}
-
-    print("[LobbyModel:IsModeLocked]:初始游戏完成记录:")
-    log_tree(GameCompletionRecord)
-
-    for _, ID in pairs(GameCompletionRecord) do
-        if tostring(ID) == tostring(TargetModeID) then
-            return false
-        end
-    end
-
     return true
 end
 

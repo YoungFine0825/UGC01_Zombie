@@ -1,11 +1,13 @@
 ---@class UGCGameState_C:BP_UGCGameState_C
+---@field GameplayStateComponent BP_GameplayStateComponent_C
 ---@field MatchTimeout int32
 --Edit Below--
 UGCGameSystem.UGCRequire('Script.Common.ue_enum_custom')
 UGCGameSystem.UGCRequire("Script.Blueprint.PortalDoor.PortalManager")
 local Delegate = require("common.Delegate")
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
-local UGCGameState = {};
+---@type UGCGameState_C
+local UGCGameState = {}
 -- 装备词缀管理器
 UGCGameState.EquipmentAffixManager = UGCGameSystem.UGCRequire('Script.Blueprint.Affix.EquipmentAffixManager')
 -- -- 重叠玩家表（用于处理玩家重叠状态）
@@ -21,6 +23,8 @@ UGCGameState.RespawnChanceCountDown = 10
 UGCGameState.CurrentRespawnChanceCountDown = 0
 -- 死亡玩家键值表（记录已死亡玩家）
 UGCGameState.DeadPlayerKeys = {}
+-- 濒死玩家键值表（记录濒死玩家）
+UGCGameState.DyingPlayerKeys = {}
 
 UGCGameState.LevelStateEnum = {
    Game = 0,    -- 进行中
@@ -41,6 +45,9 @@ end
 
 function UGCGameState:ListenMessage()
    UGCGenericMessageSystem.ListenGlobalMessage(self, "UGC.LevelFlow.LevelBegin", self, self.ResetData)
+   if UGCGameSystem.IsServer() then
+      UGCGenericMessageSystem.ListenGlobalMessage(self,GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnPlayerAliveStateChanged)
+   end
 end
 
 function UGCGameState:ResetData()
@@ -84,90 +91,61 @@ function UGCGameState:IsAllLobbyTeammateReady()
    return bReady
 end
 
-function UGCGameState:StartPortalCountDown()
-   if UGCActorComponentUtility.HasAuthority(self) and self.PortalInfo.CurrentPortalCountDown <= 0 then
-      ugcprint("UGCGameState:StartPortalCountDown")
-      self.PortalCountDownStartTime = UGCGameSystem.GetServerTimeSec()
-      self:CalculatePortalCountDown()
+---@private 作用范围：服务端
+---@param playerController UGCPlayerController_C
+function UGCGameState:OnPlayerAliveStateChanged(playerController,newState,previousState)
+   local playerKey = UGCGameSystem.GetPlayerKeyByPlayerController(playerController)
+   GameplayUtils.Print("UGCGameState.OnPlayerAliveStateChanged: Player ",playerKey," alive state changed to ",newState)
+   if newState == EPlayerAliveState.Dying then
+      --设置为原地复活
+      UGCPlayerPawnSystem.SetDefaultPlayerRespawnPointSelectionMethod(EUGCPlayerRespawnPointSelectionMethod.RespawnOnTheSpot)
+      self:OnPlayerDying(playerKey)
+   elseif newState == EPlayerAliveState.Dead then
+      --设置为原地复活
+      UGCPlayerPawnSystem.SetDefaultPlayerRespawnPointSelectionMethod(EUGCPlayerRespawnPointSelectionMethod.RespawnOnTheSpot)
+      self:OnPlayerDead(playerKey)
+   elseif newState == EPlayerAliveState.Alive then
+      self:OnPlayerAlive(playerKey)
    end
 end
 
-function UGCGameState:StopPortalCountDown()
-   if UGCActorComponentUtility.HasAuthority(self) and self.PortalInfo.CurrentPortalCountDown > 0 then
-      ugcprint("UGCGameState:StopPortalCountDown")
-      if self.PortalCountDownTimer ~= nil then
-         UGCTimerUtility.RemoveLuaTimer(self.PortalCountDownTimer)
-         self.PortalCountDownTimer = nil
+---@private
+function UGCGameState:OnPlayerDying(PlayerKey)
+   if self.DyingPlayerKeys[PlayerKey] then
+      return
+   end
+   self.DyingPlayerKeys[PlayerKey] = true
+
+   local DyingPlayerNum = 0
+   for PlayerKey, Value in pairs(self.DyingPlayerKeys) do
+      DyingPlayerNum = DyingPlayerNum + 1
+   end
+   ugcprint("UGCGameState:OnPlayerDying Current Dying Player Num=" .. tostring(DyingPlayerNum))
+
+   local SelfRescue = UGCGameplayTagSystem.RequestGameplayTag("PawnState.Buff.SelfRescue")
+   local PlayerNum = #self.PlayerArray
+   if DyingPlayerNum >= PlayerNum then
+      local anyoneCanSelfRescue = false--队伍中是否有成员有自救能力
+      for k,ps in pairs(self.PlayerArray) do
+         ---@type UGCPlayerPawn_C
+         local playerPawn = UGCGameSystem.GetPlayerPawnByPlayerState(ps)
+         if UGCPersistEffectSystem.HasDynamicState(playerPawn,SelfRescue) then
+            anyoneCanSelfRescue = true
+         end
       end
-      
-      self.PortalInfo.CurrentPortalCountDown = -1
-      UnrealNetwork.RepLazyProperty(self, "PortalInfo")
-   end
-end
-
-function UGCGameState:CalculatePortalCountDown()
-   local CurrentTime = UGCGameSystem.GetServerTimeSec()
-   self.PortalInfo.CurrentPortalCountDown = self.PortalCountDown - (CurrentTime - self.PortalCountDownStartTime)
-   UnrealNetwork.RepLazyProperty(self, "PortalInfo")
-
-   if self.PortalInfo.CurrentPortalCountDown > 0 then
-      self.PortalCountDownTimer = UGCTimerUtility.CreateLuaTimer(1, 
-         function ()
-            self:CalculatePortalCountDown()
-         end,
-         false
-      )
-   else
-      --倒计时结束传送到下一关
-      ugcprint("UGCGameState:CalculatePortalCountDown Teleport to next level")
-      self.PortalCountDownTimer = nil
-      UGCLevelFlowSystem.GoToNextLevelForAllPlayers()
-   end
-end
-
-function UGCGameState:StartRespawnChanceCountDown()
-   if UGCActorComponentUtility.HasAuthority(self) and self.CurrentRespawnChanceCountDown <= 0 then
-      ugcprint("UGCGameState:StartRespawnChanceCountDown")
-      self.RespawnChanceCountDownStartTime = UGCGameSystem.GetServerTimeSec()
-      self:CalCulateRespawnChanceCountDown()
-   end
-end
-
-function UGCGameState:StopRespawnChanceCountDown()
-   if UGCActorComponentUtility.HasAuthority(self) and self.CurrentRespawnChanceCountDown > 0 then
-      ugcprint("UGCGameState:StopRespawnChanceCountDown")
-      if self.RespawnChanceCountDownTimer ~= nil then
-         UGCTimerUtility.RemoveLuaTimer(self.RespawnChanceCountDownTimer)
-         self.RespawnChanceCountDownTimer = nil
-      end
-      
-      self.CurrentRespawnChanceCountDown = -1
-      UnrealNetwork.RepLazyProperty(self, "CurrentRespawnChanceCountDown")
-   end
-end
-
-function UGCGameState:CalCulateRespawnChanceCountDown()
-   local CurrentTime = UGCGameSystem.GetServerTimeSec()
-   self.CurrentRespawnChanceCountDown = self.RespawnChanceCountDown - (CurrentTime - self.RespawnChanceCountDownStartTime)
-   UnrealNetwork.RepLazyProperty(self, "CurrentRespawnChanceCountDown")
-
-   if self.CurrentRespawnChanceCountDown > 0 then
-      self.RespawnChanceCountDownTimer = UGCTimerUtility.CreateLuaTimer(1, 
-         function ()
-            self:CalCulateRespawnChanceCountDown()
-         end,
-         false
-      )
-   else
-      -- 触发结算
-      ugcprint("UGCGameState:CalCulateRespawnChanceCountDown Begin settlement")
-      self.RespawnChanceCountDownTimer = nil
-      if #self.PlayerArray > 0 then
-         UGCLevelFlowSystem.GameSettle(false)
+      if not anyoneCanSelfRescue then
+         --所有濒死角色判定为死亡
+         for playerKey,v in pairs(self.DyingPlayerKeys) do
+            self.DeadPlayerKeys[playerKey] = true
+         end
+         --
+         --全体倒地且没有人有自救能力，则判定全员阵亡
+         GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Server.OnAllPlayersDead)
       end
    end
 end
 
+---@private
 function UGCGameState:OnPlayerDead(PlayerKey)
    if self.DeadPlayerKeys[PlayerKey] == true then
       return
@@ -182,14 +160,18 @@ function UGCGameState:OnPlayerDead(PlayerKey)
 
    local PlayerNum = #self.PlayerArray
    if DeadPlayerNum >= PlayerNum then
-      self:StartRespawnChanceCountDown()
+      --全员阵亡
+      GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Server.OnAllPlayersDead)
    end
 end
 
+---@private
 function UGCGameState:OnPlayerAlive(PlayerKey)
-   if self.DeadPlayerKeys[PlayerKey] == nil then
+   local isDyingOrDead = self.DyingPlayerKeys[PlayerKey] == true or self.DeadPlayerKeys[PlayerKey] == true
+   if not isDyingOrDead then
       return
    end
+   self.DyingPlayerKeys[PlayerKey] = nil
    self.DeadPlayerKeys[PlayerKey] = nil
 
    local DeadPlayerNum = 0
@@ -200,7 +182,7 @@ function UGCGameState:OnPlayerAlive(PlayerKey)
 
    local PlayerNum = #self.PlayerArray
    if DeadPlayerNum < PlayerNum then
-      self:StopRespawnChanceCountDown()
+
    end
 end
 
@@ -214,11 +196,11 @@ function UGCGameState:GetReplicatedProperties()
 end
 
 function UGCGameState:OnRep_CurrentPortalCountDown()
-   PortalManager.OnCountDownUpdate(self.CurrentPortalCountDown)
+
 end
 
 function UGCGameState:OnRep_PortalInfo()
-   PortalManager.OnCountDownUpdate(self.PortalInfo.CurrentPortalCountDown, self.PortalInfo.InPortalPlayerKeys)
+
 end
 
 function UGCGameState:OnRep_CurrentRespawnChanceCountDown()
@@ -235,6 +217,17 @@ end
 
 function UGCGameState.IsInLobby()
    return UGCGameData.GetGameModeName(UGCMultiMode.GetModeID()) == UGCGameData.ModeName.Lobby
+end
+
+---@public
+---@return boolean
+function UGCGameState:IsPlayerAllDead()
+   local deadNum = 0
+   for k,v in pairs(self.DeadPlayerKeys) do
+      deadNum = deadNum + 1
+   end
+   local ret = deadNum >= #self.PlayerArray
+   return ret
 end
 
 return UGCGameState;

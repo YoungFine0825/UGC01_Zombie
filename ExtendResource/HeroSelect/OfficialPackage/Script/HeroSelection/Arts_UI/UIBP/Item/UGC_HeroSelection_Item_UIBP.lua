@@ -1,4 +1,4 @@
-﻿---@class UGC_HeroSelection_Item_UIBP_C:UUserWidget
+---@class UGC_HeroSelection_Item_UIBP_C:UUserWidget
 ---@field DX_Flip UWidgetAnimation
 ---@field Button_ItemGet_Item UButton
 ---@field CanvasPanel_Lock UCanvasPanel

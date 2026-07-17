@@ -2,12 +2,13 @@
 ---@field Button_Close UButton
 ---@field TextBlock_0 UTextBlock
 ---@field TextBlock_BossTitle UTextBlock
----@field TextBlock_CriticalTitle UTextBlock
 ---@field TextBlock_EliteMonsterTitle UTextBlock
----@field TextBlock_hurtTitle UTextBlock
 ---@field TextBlock_ModeTitle UTextBlock
----@field TextBlock_NPCTitle UTextBlock
----@field UGC_ReuseList2 UUGC_ReuseList2_C
+---@field TextBlock_Player UTextBlock
+---@field TextBlock_TitleHeadshot UTextBlock
+---@field TextBlock_TitleKill UTextBlock
+---@field TextBlock_TitleScore UTextBlock
+---@field UGC_ReuseList2 UGC_ReuseList2_C
 --Edit Below--
 local PromiseFuture = require("common.PromiseFuture")
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
@@ -72,12 +73,12 @@ end
 
 function UGC_ResultTab_UIBP:UpdateLevelInfo()
 	ugcprint("UGC_ResultTab_UIBP:UpdateLevelInfo")
-	local level = UGCLevelFlowSystem.GetCurrentLevelStage(UGCGameSystem.GetLocalPlayerController()) or 1
-	local ModeID = UGCMultiMode.GetModeID()
-	local Name = UGCGameData.GetGameModeName(ModeID)
-	if Name then
-		self.TextBlock_ModeTitle:SetText(string.format("%s--第%s关", Name, level))
-	end
+	--local level = UGCLevelFlowSystem.GetCurrentLevelStage(UGCGameSystem.GetLocalPlayerController()) or 1
+	--local ModeID = UGCMultiMode.GetModeID()
+	--local Name = UGCGameData.GetGameModeName(ModeID)
+	--if Name then
+	--	self.TextBlock_ModeTitle:SetText(string.format("%s--第%s关", Name, level))
+	--end
 end
 
 function UGC_ResultTab_UIBP:ReLoad(PS)
@@ -88,11 +89,9 @@ function UGC_ResultTab_UIBP:ReLoad(PS)
 
 	for i = 1, #self.TeamMatePlayerStateList do
 		self.PlayerInfoList[i] = {}
-		self.PlayerInfoList[i].TotalDamage = 0
-		self.PlayerInfoList[i].TotalCriticalHit = 0
-		self.PlayerInfoList[i].MonsterKill = 0
-		self.PlayerInfoList[i].EliteMonsterKill = 0
-		self.PlayerInfoList[i].BossKill = 0
+		self.PlayerInfoList[i].Score = 0
+		self.PlayerInfoList[i].Kill = 0
+		self.PlayerInfoList[i].Headshot = 0
 	end
 
 	self.UGC_ReuseList2:Reload(#self.TeamMatePlayerStateList)
@@ -103,6 +102,7 @@ function UGC_ResultTab_UIBP:UGC_ReuseList2_OnUpdateItem(Widget, Idx)
     if not Widget then
         return
     end
+	---@type UGCPlayerState_C
     local PlayerState = self.TeamMatePlayerStateList[Idx + 1]
     if not PlayerState then
         ugcprint("UGC_ResultTab_UIBP:UGC_ReuseList2_OnUpdateItem not RankData")
@@ -119,30 +119,26 @@ function UGC_ResultTab_UIBP:UGC_ReuseList2_OnUpdateItem(Widget, Idx)
 	Widget.BattleGenderUI_Sex:SetGender(sex, tostring(PlayerState.UID))
 	Widget.TextBlock_Rank:SetText(tostring(Idx + 1))
 	Widget.Text_PlayerName:SetText(tostring(PlayerState.PlayerName))
-	if PlayerState.GameRecordData then
-		PlayerInfo.TotalDamage = PlayerState.GameRecordData.TotalDamage or 0
-		PlayerInfo.TotalCriticalHit = PlayerState.GameRecordData.TotalCriticalHit or 0
-		if PlayerState.GameRecordData.TotalMonsterKillByType then
-			PlayerInfo.MonsterKill = PlayerState.GameRecordData.TotalMonsterKillByType.Monster
-			PlayerInfo.EliteMonsterKill = PlayerState.GameRecordData.TotalMonsterKillByType.EliteMonster
-			PlayerInfo.BossKill = PlayerState.GameRecordData.TotalMonsterKillByType.Boss
-		end
-	end
 
-	Widget.TextBlock_Hurt:SetText(string.format("%.2f", PlayerInfo.TotalDamage))
-	Widget.TextBlock_Critical:SetText(string.format("%.2f", PlayerInfo.TotalCriticalHit))
-	Widget.TextBlock_NPC:SetText(tostring(PlayerInfo.MonsterKill))
-	Widget.TextBlock_EliteMonster:SetText(tostring(PlayerInfo.EliteMonsterKill))
-	Widget.TextBlock_Boss:SetText(tostring(PlayerInfo.BossKill))
+	local playerStat = PlayerState:GetInGameStatDataComponent()
+	PlayerInfo.Score = playerStat:GetStatData(EPlayerInGameStatKeys.TotalScore,0)
+	PlayerInfo.Kill = playerStat:GetStatData(EPlayerInGameStatKeys.TotalKill,0)
+	PlayerInfo.Headshot = playerStat:GetStatData(EPlayerInGameStatKeys.TotalHeadshot,0)
 
-	Widget.Experience.TextBlock_experience:SetText(tostring(PlayerState.UGCPlayerLevel))
-	Widget.Experience.TextBlock_CurrentValue:SetText(tostring(PlayerState.PlayerExp))
-	local cfg = UGCGameData.GetLevelConfig(PlayerState.UGCPlayerLevel)
-	if cfg then
-		Widget.Experience.TextBlock_TotalValue:SetText(tostring(cfg.Exp))
-		local Percent = PlayerState.PlayerExp / cfg.Exp
-		Widget.Experience.ProgressBar_Grade:SetPercent(Percent)
-	end
+	Widget.TextBlock_Score:SetText(tostring(PlayerInfo.Score))
+	Widget.TextBlock_Kill:SetText(tostring(PlayerInfo.Kill))
+	Widget.TextBlock_Headshot:SetText(tostring(PlayerInfo.Headshot))
+	--Widget.TextBlock_EliteMonster:SetText(tostring(PlayerInfo.EliteMonsterKill))
+	--Widget.TextBlock_Boss:SetText(tostring(PlayerInfo.BossKill))
+
+	--Widget.Experience.TextBlock_experience:SetText(tostring(PlayerState.UGCPlayerLevel))
+	--Widget.Experience.TextBlock_CurrentValue:SetText(tostring(PlayerState.PlayerExp))
+	--local cfg = UGCGameData.GetLevelConfig(PlayerState.UGCPlayerLevel)
+	--if cfg then
+	--	Widget.Experience.TextBlock_TotalValue:SetText(tostring(cfg.Exp))
+	--	local Percent = PlayerState.PlayerExp / cfg.Exp
+	--	Widget.Experience.ProgressBar_Grade:SetPercent(Percent)
+	--end
 end
 
 -- [Editor Generated Lua] function define End;

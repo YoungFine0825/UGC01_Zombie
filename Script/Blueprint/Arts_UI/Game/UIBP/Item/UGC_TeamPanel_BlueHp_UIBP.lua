@@ -13,7 +13,8 @@ local UGC_TeamPanel_BlueHp_UIBP = {
 
 
 function UGC_TeamPanel_BlueHp_UIBP:Construct()
-    self:LuaInit();
+    self:LuaInit()
+    self:SetVisibility(ESlateVisibility.Collapsed)
 end
 
 function UGC_TeamPanel_BlueHp_UIBP:UpdateMagic()

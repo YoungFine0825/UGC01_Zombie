@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep -l \"Map\\\\|Level\\\\|Switch\")",
+      "Bash(xargs grep -l \"FourMaps_Main\\\\|OpenLevel\\\\|Travel\\\\|MapName\")",
+      "Bash(xargs grep -l \"UGCLevelFlowSystem\\\\|LevelFlow\\\\|MapMode\\\\|ChangeMap\\\\|SwitchLevel\")",
+      "Bash(xargs grep -l \"DataTable\\\\|TableDataLoadTool\\\\|CSV\")",
+      "Bash(xargs grep -l \"MapMode\\\\|bUseMultiModeMatchSetting\\\\|MultiModeSetting\")",
+      "Bash(xargs grep -l \"UGCMultiMode.GetModeID\\\\|StartMapName\\\\|MapMode.*19\\\\|MapMode.*0\")",
+      "Bash(grep -iE \"MapMode|StartMapName|bUseMultiMode|MultiModeSettingNum|bIsBigWorld\" Template_FourMaps/*.ugcproj)",
+      "Bash(grep -iE \"MapMode|StartMapName\" Template_SysFourMapsMap/*.ugcproj)",
+      "Bash(grep -iE \"MapMode|StartMapName\" PVE/*.ugcproj)",
+      "WebFetch(domain:developer.gp.qq.com)"
+    ]
+  }
+}

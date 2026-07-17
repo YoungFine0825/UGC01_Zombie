@@ -1,6 +1,7 @@
 ---@class BP_UGCBackpack_C:BP_BackpackComponentV2_C
 ---@field MainWeaponAffixType TEnumAsByte<Enum_MainWeaponAffixType>
 --Edit Below--
+---@type BP_UGCBackpack_C
 local BP_UGCBackpack = {}
 
 BP_UGCBackpack.AffixRecords = {}
@@ -143,8 +144,6 @@ function BP_UGCBackpack:OnPawnRespawn()
             self:ApplyEquipAffixEffect(EquipItem);
         end
     end
-
-    self:EnsureDefaultWeapons(true)
 end
 
 ---判断ItemID是不是一个有效实例
@@ -335,14 +334,14 @@ function BP_UGCBackpack:OnPlayerSwitchWeapon(SlotName)
     -- 失效主武器效果
     if self.LastWeapon ~= nil then
         ugcprint(string.format("[BP_UGCBackpack:OnPlayerSwitchWeapon] LastWeapon:%s", ExportText(totable(self.LastWeapon))));
-        self:UnApplyEquipAffixEffect(self.LastWeapon);
+        --self:UnApplyEquipAffixEffect(self.LastWeapon);
     end
 
     local Weapon = UGCWeaponManagerSystem.GetCurrentWeapon(self.OwnerCharacter);
     if Weapon and Weapon.ItemDefineID then
         -- 生效词条
         ugcprint(string.format("[BP_UGCBackpack:OnPlayerSwitchWeapon] Weapon:%s", ExportText(totable(Weapon.ItemDefineID))));
-        self:ApplyEquipAffixEffect(Weapon.ItemDefineID);
+        --self:ApplyEquipAffixEffect(Weapon.ItemDefineID);
         self.LastWeapon = Weapon.ItemDefineID;
     else
         ugcprint("[BP_UGCBackpack:OnPlayerSwitchWeapon] Don't Hold Weapon");
@@ -365,12 +364,13 @@ function BP_UGCBackpack:EnsureDefaultWeapons(bNeedEquip)
         ugcprint("[BP_UGCBackpack:EnsureDefaultWeapon] OwnerController is nil")
         return false
     end
-    local weaponCfgId = 1001
-    local delivered = GameplaySystem.WeaponSystem.DeliverWeaponToPlayer(pc,weaponCfgId)
+    local playerKey = UGCGameSystem.GetPlayerKeyByPlayerController(self.OwnerController)
+    local weaponCfgId = GameplaySystem.WeaponSystem:GetDefaultWeaponID(playerKey)
+    local delivered = GameplaySystem.WeaponSystem:DeliverWeaponToPlayer(pc,weaponCfgId)
 
     if bNeedEquip then
-        local slotName = "EquipmentSlot.Core.MainSlot1"--"EquipmentSlot.Core.SubSlot"
-         GameplaySystem.WeaponSystem.EquipGainedWeapon(pc,weaponCfgId,slotName)
+        local slotName = "EquipmentSlot.Core.MainSlot1"
+         GameplaySystem.WeaponSystem:EquipGainedWeapon(pc,weaponCfgId,slotName)
     end
 end
 
