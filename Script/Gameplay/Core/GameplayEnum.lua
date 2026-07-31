@@ -33,7 +33,8 @@ EPlayerAliveState = {
 ---@class Gameplay.EPlayerInGameStatKeys
 EPlayerInGameStatKeys = {
     Unknown = nil,
-    TotalScore = "Score",
+    Score = "Score",--当前玩家分数
+    TotalScore = "TotalScore",--本局玩家总得分（不会因为玩家的购买操作减少）
     TotalKill = "TotalKill",
     TotalHeadshot = "TotalHeadshot",--爆头数
     TotalDamage = "TotalDamage",

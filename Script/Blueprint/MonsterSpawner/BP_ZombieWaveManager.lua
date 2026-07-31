@@ -198,7 +198,7 @@ function BP_ZombieWaveManager:BuildZombieSpawnPlan(round)
     planInfo.deadNum = 0
     planInfo.spawnedNumber = 0
     planInfo.alivingNumber = 0
-    local playerCnt = UGCGameSystem.GetPlayerNum(true)
+    local playerCnt = GameplaySystem.PlayerSystem:GetCurrentPlayerNum()
     local zombiesNum = GameplaySystem.ZombieSpawnSystem:CalcuMaxZombiesNumber(round,playerCnt,self)
     local zombieHp = GameplaySystem.ZombieSpawnSystem:CalcuMaxZombieHealth(round,100)
     planInfo.maxZombieNumAtOneTime = GameplaySystem.ZombieSpawnSystem:CalcuMaxZombiesNumberAtOneTime(playerCnt,self.MaxZombieNumAtOneTime,self.ExtraZombieNumPerPlayer)

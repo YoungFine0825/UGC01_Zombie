@@ -325,6 +325,27 @@ UGCCustomGameAttributeType = {
 	UGCAttributeGroup_Character_TotalHeadshot = 'TotalHeadshot',
 	--Character [局内总伤害量-TotalDamage],
 	UGCAttributeGroup_Character_TotalDamage = 'TotalDamage',
+	--Character [自救次数-SelfRescueTimes],
+	UGCAttributeGroup_Character_SelfRescueTimes = 'SelfRescueTimes',
+	--Character [秒杀-InstaKill],
+	UGCAttributeGroup_Character_InstaKill = 'InstaKill',
+	--Character [得分倍数-ScoreMultiple],
+	UGCAttributeGroup_Character_ScoreMultiple = 'ScoreMultiple',
+	--Character [体力消耗缩放因子-StaminaConsumeScalar],
+	UGCAttributeGroup_Character_StaminaConsumeScalar = 'StaminaConsumeScalar',
+	--Character [最终伤害减伤率-FinalDamageResistRatio],
+	UGCAttributeGroup_Character_FinalDamageResistRatio = 'FinalDamageResistRatio',
+	--Character [能被秒杀-CanInstaKill],
+	UGCAttributeGroup_Character_CanInstaKill = 'CanInstaKill',
+	--Character [玩家局内总得分-TotalScore],
+	UGCAttributeGroup_Character_TotalScore = 'TotalScore',
+
+---------------------------------------------------------
+
+	--Weapon [子弹倍数-BulletMultiple],
+	UGCAttributeGroup_Weapon_BulletMultiple = 'BulletMultiple',
+	--Weapon [基础伤害增加倍数-BaseDamageMultiple],
+	UGCAttributeGroup_Weapon_BaseDamageMultiple = 'BaseDamageMultiple',
 }; 
 
 UGCCustomGameAttributeTypeCommentMap = { 
@@ -357,5 +378,17 @@ UGCCustomGameAttributeTypeCommentMap = {
 	['TotalKill'] = 'Character [局内击杀数-TotalKill]', 
 	['TotalHeadshot'] = 'Character [局内爆头数-TotalHeadshot]', 
 	['TotalDamage'] = 'Character [局内总伤害量-TotalDamage]', 
+	['SelfRescueTimes'] = 'Character [自救次数-SelfRescueTimes]', 
+	['InstaKill'] = 'Character [秒杀-InstaKill]', 
+	['ScoreMultiple'] = 'Character [得分倍数-ScoreMultiple]', 
+	['StaminaConsumeScalar'] = 'Character [体力消耗缩放因子-StaminaConsumeScalar]', 
+	['FinalDamageResistRatio'] = 'Character [最终伤害减伤率-FinalDamageResistRatio]', 
+	['CanInstaKill'] = 'Character [能被秒杀-CanInstaKill]', 
+	['TotalScore'] = 'Character [玩家局内总得分-TotalScore]', 
+
+---------------------------------------------------------
+
+	['BulletMultiple'] = 'Weapon [子弹倍数-BulletMultiple]', 
+	['BaseDamageMultiple'] = 'Weapon [基础伤害增加倍数-BaseDamageMultiple]', 
 }; 
 

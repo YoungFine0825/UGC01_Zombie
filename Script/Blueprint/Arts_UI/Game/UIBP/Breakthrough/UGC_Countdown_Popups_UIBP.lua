@@ -109,7 +109,7 @@ function UGC_Countdown_Popups_UIBP:Refresh()
     --    self.CoinRespawnName:SetText("复活")
     --end
 
-    self.WidgetSwitcher_Mode:SetActiveWidgetIndex(1)
+    self.WidgetSwitcher_Mode:SetActiveWidgetIndex(0)
     self.CountDownTipNameText:SetVisibility(ESlateVisibility.Collapsed)
     
     self.VirtualItemManager.OnItemNumUpdatedDelegate:Add(self.SetCoinInfo, self) --潜规则：死亡时会暂时清空背包，这个时候有可能获取到的金币为0，所以这里需要注册物品改变的回调，当背包物品恢复时，重新设置金币数量
@@ -158,15 +158,15 @@ function UGC_Countdown_Popups_UIBP:Expand()
 end
 
 function UGC_Countdown_Popups_UIBP:RefreshCountDown(CountDown)
-    --if CountDown <= -1 then
-    --    self.WidgetSwitcher_Mode:SetActiveWidgetIndex(1)
-    --    self.CountDownTipNameText:SetVisibility(ESlateVisibility.Collapsed)
-    --    return
-    --end
-    --
-    --self.WidgetSwitcher_Mode:SetActiveWidgetIndex(0)
+    if CountDown <= -1 then
+        self.WidgetSwitcher_Mode:SetActiveWidgetIndex(1)
+        --self.CountDownTipNameText:SetVisibility(ESlateVisibility.Collapsed)
+        return
+    end
+
+    self.WidgetSwitcher_Mode:SetActiveWidgetIndex(0)
     --self.CountDownTipNameText:SetVisibility(ESlateVisibility.HitTestInvisible)
-    --self.CountDownText:SetText(string.format("%dS", CountDown))
+    self.CountDownText:SetText(string.format("%dS", CountDown))
 end
 
 function UGC_Countdown_Popups_UIBP:OnCoinRespawnButtonClick()

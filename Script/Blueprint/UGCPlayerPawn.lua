@@ -1,5 +1,4 @@
 ---@class UGCPlayerPawn_C:BP_UGCPlayerPawn_C
----@field WeaponSystemComponent BP_PlayerPawnWeaponSystemComponent_C
 ---@field PlayerAutoRecoverHpComponent BP_PlayerAutoRecoverHpComponent_C
 ---@field PlayerAliveStateControlComponent BP_PlayerAliveStateControlComponent_C
 ---@field PlayerStaminaComponent PlayerStaminaComponent_C
@@ -12,6 +11,9 @@ local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 function UGCPlayerPawn:ReceiveBeginPlay()
 
     UGCPlayerPawn.SuperClass.ReceiveBeginPlay(self)
+
+    ---@type USTCharacterNearDeathComp
+    local nearDeathComp = self.NearDeatchComponent
     
     if UGCGameSystem.IsServer() then
         self:InitInServer()

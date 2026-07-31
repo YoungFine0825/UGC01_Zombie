@@ -1,5 +1,4 @@
 ---@class BP_PlayerAliveStateControlComponent_C:ActorComponent
----@field BuffDyingProtect UClass
 --Edit Below--
 
 --- 玩家生命状态控制组件
@@ -18,9 +17,21 @@ function BP_PlayerAliveStateControlComponent:ReceiveBeginPlay()
     ---@type UGCPlayerPawn_C
     local playerPawn = UGCActorComponentUtility.GetOwner(self)
     self.Owner = playerPawn
+    ---@type UGCPlayerController_C
+    local playerController = UGCGameSystem.GetPlayerControllerByPlayerPawn(playerPawn)
+    self.m_playerController = playerController
+    if playerController then
+        self.m_playerKey = UGCGameSystem.GetPlayerKeyByPlayerController(playerController)
+    else
+        self.m_playerKey = UGCGameSystem.GetPlayerKeyByPlayerPawn(playerPawn)
+    end
     self.m_lastState = EPlayerAliveState.Alive
+    self.m_isStartSelfRescueCountDown = false
+    self.m_selfRescueCompleteTime = 0
+    self.m_selfRescueRemainingTime = 0
+    self.m_isServer = UGCGameSystem.IsServer()
     --
-    if UGCGameSystem.IsServer() then
+    if self.m_isServer then
         self:OnBeginPlayServer()
     end
 end
@@ -29,18 +40,29 @@ end
 --[[--]]
 function BP_PlayerAliveStateControlComponent:ReceiveTick(DeltaTime)
     BP_PlayerAliveStateControlComponent.SuperClass.ReceiveTick(self, DeltaTime)
+    if self.m_isServer then
+        self:OnServerTick()
+    end
 end
 
 
 --[[--]]
 function BP_PlayerAliveStateControlComponent:ReceiveEndPlay()
     BP_PlayerAliveStateControlComponent.SuperClass.ReceiveEndPlay(self)
-    if UGCGameSystem.IsServer() then
+    if self.m_isServer then
         self:OnEndPlayerServer()
     end
     self.Owner = nil
+    self.m_playerController = nil
 end
 
+function BP_PlayerAliveStateControlComponent:GetReplicatedProperties()
+    return {"m_selfRescueRemainingTime","Lzay"},{"m_isStartSelfRescueCountDown","Lzay"}
+end
+
+function BP_PlayerAliveStateControlComponent:GetAvailableClientRPCs()
+    return "RPC_Client_StartSelfRescue","RPC_Client_SelfRescueEnd"
+end
 
 function BP_PlayerAliveStateControlComponent:OnBeginPlayServer()
     GameplayUtils.Print("BP_PlayerAliveStateControlComponent.OnBeginPlayServer!")
@@ -49,8 +71,23 @@ function BP_PlayerAliveStateControlComponent:OnBeginPlayServer()
     self.Owner.DynamicStateInterruptedHandle:Add(self.OnStateInterrupted, self)
 end
 
-function BP_PlayerAliveStateControlComponent:OnEndPlayerServer()
+---@private
+function BP_PlayerAliveStateControlComponent:OnServerTick()
+    if self.m_isStartSelfRescueCountDown then
+        local curTime = UGCGameSystem.GetServerTimeSec()
+        local remainingTime = math.max(0,self.m_selfRescueCompleteTime - curTime)
+        --
+        self.m_selfRescueRemainingTime = remainingTime
+        UnrealNetwork.RepLazyProperty(self,"m_selfRescueRemainingTime")
+        --
+        if remainingTime <= 0 then
+            self:ServerSelfRescueCompleted()
+        end
+    end
+end
 
+function BP_PlayerAliveStateControlComponent:OnEndPlayerServer()
+    self:ServerInterruptSelfRescue()
 end
 
 ---@private
@@ -101,9 +138,9 @@ function BP_PlayerAliveStateControlComponent:_ServerChangePlayerAliveState(playe
 
     local lastState = self.m_lastState
     if newState == EPlayerAliveState.Dying then
-        --UGCPersistEffectSystem.AddBuffByClass(self.Owner,self.BuffDyingProtect)
+
     elseif newState == EPlayerAliveState.Alive then
-        --UGCPersistEffectSystem.RemoveBuffByClass(self.Owner,self.BuffDyingProtect)
+        self:ServerInterruptSelfRescue()
     end
     GameplayUtils.Print("BP_PlayerAliveStateControlComponent._ServerChangePlayerAliveState: 玩家 ",playerKey," 切换状态至 ",newState," 成功！")
     self.m_lastState = newState
@@ -126,15 +163,117 @@ end
 
 ---@public
 function BP_PlayerAliveStateControlComponent:GetPlayerKey()
-    local playerKey = UGCGameSystem.GetPlayerKeyByPlayerPawn(self.Owner)
-    return playerKey
+    if self.m_playerKey <= 0 then
+        self.m_playerKey = UGCGameSystem.GetPlayerKeyByPlayerPawn(self.Owner)
+    end
+    return self.m_playerKey
 end
 
 ---@public
 ---@return UGCPlayerController_C
 function BP_PlayerAliveStateControlComponent:GetPlayerController()
-    local pc = UGCGameSystem.GetPlayerControllerByPlayerPawn(self.Owner)
-    return pc
+    if not self.m_playerController then
+        self.m_playerController = UGCGameSystem.GetPlayerControllerByPlayerKey(self:GetPlayerKey())
+    end
+    if not self.m_playerController then
+        self.m_playerController = UGCGameSystem.GetPlayerControllerByPlayerPawn(self.Owner)
+    end
+    return self.m_playerController
+end
+
+---@protected
+function BP_PlayerAliveStateControlComponent:ServerStartSelfRescue()
+    local delay = 10
+    self.m_selfRescueCompleteTime = UGCGameSystem.GetServerTimeSec() + delay
+    self.m_selfRescueRemainingTime = 0
+    self.m_isStartSelfRescueCountDown = true
+    UnrealNetwork.RepLazyProperty(self,"m_isStartSelfRescueCountDown")
+    GameplaySystem.PlayerSystem:UseSelfRescueTimes(self:GetPlayerKey(),1)
+    --
+    UnrealNetwork.CallUnrealRPC(
+            self:GetPlayerController(),
+            self,
+            "RPC_Client_StartSelfRescue",
+            self.m_selfRescueCompleteTime
+    )
+    --
+    GameplayUtils.Print("BP_PlayerAliveStateControlComponent.ServerStartSelfRescue")
+end
+
+---@private
+function BP_PlayerAliveStateControlComponent:RPC_Client_StartSelfRescue(completeTime)
+    local localPlayerKey = UGCGameSystem.GetLocalPlayerKey()
+    if self.m_playerKey ~= localPlayerKey then
+        return
+    end
+    --显示复活倒计时界面
+    local playerController = self:GetPlayerController()
+    playerController:OpenRespawnUI()
+    --
+    local remainingTime = math.max(0,completeTime - UGCGameSystem.GetServerTimeSec())
+    UGCTimerUtility.CreateLuaTimer(remainingTime,function()
+        BreakthroughManager:CloseRespawnUI()
+    end,false)
+    --
+    GameplayUtils.Print("BP_PlayerAliveStateControlComponent.RPC_Client_StartSelfRescue")
+end
+
+function BP_PlayerAliveStateControlComponent:OnRep_m_selfRescueRemainingTime()
+    local localPlayerKey = UGCGameSystem.GetLocalPlayerKey()
+    if self.m_playerKey ~= localPlayerKey then
+        return
+    end
+    local remainingTime = self.m_selfRescueRemainingTime
+    BreakthroughManager:RefreshRespawnUICountDown(remainingTime)
+
+end
+
+---@protected
+function BP_PlayerAliveStateControlComponent:ServerSelfRescueCompleted()
+    --手动复活
+    GameplaySystem.PlayerSystem:ServerRespawnPlayer(self:GetPlayerKey())
+    --
+    self.m_isStartSelfRescueCountDown = false
+    UnrealNetwork.RepLazyProperty(self,"m_isStartSelfRescueCountDown")
+    self.m_selfRescueCompleteTime = 0
+    --
+    UnrealNetwork.CallUnrealRPC(
+            self:GetPlayerController(),
+            self,
+            "RPC_Client_SelfRescueEnd",
+            self.m_selfRescueCompleteTime
+    )
+    --
+    GameplayUtils.Print("BP_PlayerAliveStateControlComponent.ServerSelfRescueCompleted")
+end
+
+---@private
+function BP_PlayerAliveStateControlComponent:RPC_Client_SelfRescueEnd()
+    local localPlayerKey = UGCGameSystem.GetLocalPlayerKey()
+    if self.m_playerKey ~= localPlayerKey then
+        return
+    end
+    BreakthroughManager:CloseRespawnUI()
+    --
+    GameplayUtils.Print("BP_PlayerAliveStateControlComponent.RPC_Client_SelfRescueEnd")
+end
+
+---@protected
+function BP_PlayerAliveStateControlComponent:ServerInterruptSelfRescue()
+    self.m_isStartSelfRescueCountDown = false
+    self.m_selfRescueCompleteTime = 0
+    UnrealNetwork.RepLazyProperty(self,"m_isStartSelfRescueCountDown")
+end
+
+---@public 是否正在自救
+---@return boolean
+function BP_PlayerAliveStateControlComponent:IsSelfRescuing()
+    return self.m_isStartSelfRescueCountDown
+end
+
+---@protected
+function BP_PlayerAliveStateControlComponent:OnRep_m_isStartSelfRescueCountDown()
+
 end
 
 return BP_PlayerAliveStateControlComponent

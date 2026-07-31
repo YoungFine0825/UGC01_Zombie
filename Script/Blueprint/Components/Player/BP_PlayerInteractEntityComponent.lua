@@ -4,6 +4,7 @@ local BP_PlayerInteractEntityComponent = {}
 --[[--]]
 function BP_PlayerInteractEntityComponent:ReceiveBeginPlay()
     BP_PlayerInteractEntityComponent.SuperClass.ReceiveBeginPlay(self)
+    self.m_isServer = UGCGameSystem.IsServer()
     ---@type UGCPlayerController_C
     self.m_owner = UGCActorComponentUtility.GetOwner(self)
     ---@type table<number,BP_InteractEntityComponent_C>
@@ -14,10 +15,15 @@ function BP_PlayerInteractEntityComponent:ReceiveBeginPlay()
     self.m_curFocusedEntityID = 0
     self.m_sentInteractRequestEntities = {}
     self.m_interactUIWeakptr = nil
+    ---@type table<number,boolean> 本帧内自动交互实体的去重队列
+    self.m_pendingAutoInteractQueue = {}
     --前后端都监听
     GameplaySystem.EventSystem:Listen(GameplayEvents.Global.OnPlayerEnterInteractEntity,self,self.OnPlayerEnterInteractEntity)
     GameplaySystem.EventSystem:Listen(GameplayEvents.Global.OnPlayerLeaveInteractEntity,self,self.OnPlayerLeaveInteractEntity)
-    if not UGCGameSystem.IsServer() then
+    if UGCGameSystem.IsServer() then
+        GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnServerPlayerAliveStateChanged)
+    else
+        GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnLocalPlayerAliveStateChanged,self,self.OnLocalPlayerAliveStateChanged)
         GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnLocalPlayerInvokeInteraction,self,self.OnLocalPlayerInvokeInteraction)
     end
 end
@@ -26,6 +32,9 @@ end
 --[[--]]
 function BP_PlayerInteractEntityComponent:ReceiveTick(DeltaTime)
     BP_PlayerInteractEntityComponent.SuperClass.ReceiveTick(self, DeltaTime)
+    if not self.m_isServer then
+        self:_FlushPendingAutoInteractQueue()
+    end
 end
 
 
@@ -33,11 +42,22 @@ end
 function BP_PlayerInteractEntityComponent:ReceiveEndPlay()
     BP_PlayerInteractEntityComponent.SuperClass.ReceiveEndPlay(self)
     GameplaySystem.EventSystem:UnlistenAll(self)
+    self.m_pendingAutoInteractQueue = nil
     self.m_owner = nil
     --if not UGCGameSystem.IsServer() then
     --    UGCGenericMessageSystem.UnListenMessage(self,GameplayEvents.Client.OnLocalPlayerInvokeInteraction)
     --end
     self:DestroyInteractionUIWidget()
+end
+
+---@private
+function BP_PlayerInteractEntityComponent:GetAvailableServerRPCs()
+    return "RPC_Server_RequestInteract","RPC_Server_RequestInterruptInteraction"
+end
+
+---@private
+function BP_PlayerInteractEntityComponent:GetAvailableClientRPCs()
+    return "RPC_Client_ResponseInteract","RPC_Client_RequestInterruptInteraction"
 end
 
 ---@protected 玩家进入可交互实体
@@ -49,6 +69,8 @@ function BP_PlayerInteractEntityComponent:OnPlayerEnterInteractEntity(playerCont
         GameplayUtils.Exception("[InteractEntity] OnPlayerEnterInteractEntity return: playerController不是自身, instanceID=",tostring(interactEntityInstanceID))
         return
     end
+
+
     if self.m_enteredInteractEntities[interactEntityInstanceID] then
         GameplayUtils.Exception("[InteractEntity] OnPlayerEnterInteractEntity return: 实体已在列表内, instanceID=",tostring(interactEntityInstanceID))
         return
@@ -57,11 +79,17 @@ function BP_PlayerInteractEntityComponent:OnPlayerEnterInteractEntity(playerCont
     if isServer then
         self.m_enteredInteractEntities[interactEntityInstanceID] = interactEntityComp
         GameplayUtils.Print("[InteractEntity] OnPlayerEnterInteractEntity 服务端记录成功, instanceID=",tostring(interactEntityInstanceID))
+        if not interactEntityComp.bNeedPlayerConfirm then--对于不需要玩家的交互，服务器直接处理了
+            GameplayUtils.Print("[InteractEntity] OnPlayerEnterInteractEntity 不需要玩家确认，加入自动交互队列, instanceID=",tostring(interactEntityInstanceID))
+            --self.m_pendingAutoInteractQueue[interactEntityInstanceID] = true
+            self:RPC_Server_RequestInteract(
+                    UGCGameSystem.GetPlayerKeyByPlayerController(playerController),
+                    interactEntityInstanceID,
+                    0
+            )
+        end
     else
-        if not interactEntityComp.bNeedPlayerConfirm then
-            GameplayUtils.Print("[InteractEntity] OnPlayerEnterInteractEntity 不需要玩家确认，自动交互, instanceID=",tostring(interactEntityInstanceID))
-            self:ClientSendInteractMessage(interactEntityInstanceID)
-        else
+        if interactEntityComp.bNeedPlayerConfirm then--客户端处理需要玩家确认的交互
             self.m_enteredInteractEntities[interactEntityInstanceID] = interactEntityComp
             self:ClientResortEnteredEntities()
             GameplayUtils.Print("[InteractEntity] OnPlayerEnterInteractEntity 客户端手动交互, instanceID=",tostring(interactEntityInstanceID))
@@ -101,17 +129,26 @@ function BP_PlayerInteractEntityComponent:OnPlayerLeaveInteractEntity(playerCont
 end
 
 ---@private
-function BP_PlayerInteractEntityComponent:GetAvailableServerRPCs()
-    return "RPC_Server_RequestInteract","RPC_Server_RequestInterruptInteraction"
+function BP_PlayerInteractEntityComponent:OnServerPlayerAliveStateChanged(playerController,newState,previousState)
+    if self.m_owner ~= playerController then
+        return
+    end
 end
 
 ---@private
-function BP_PlayerInteractEntityComponent:GetAvailableClientRPCs()
-    return "RPC_Client_ResponseInteract","RPC_Client_RequestInterruptInteraction"
+function BP_PlayerInteractEntityComponent:OnLocalPlayerAliveStateChanged(newState)
+    local playerController = self.m_owner
+    if newState == EPlayerAliveState.Alive then
+        --复活后尝试恢复客户端交互界面
+        self:ClientUpdateInteractionUIWidget()
+    elseif newState == EPlayerAliveState.Dying or newState == EPlayerAliveState.Dead then
+        --死亡后隐藏交互界面
+        self:ClientShowInteractionUIWidget(false)
+    end
 end
 
 ---@private 客户端发来交互请求
-function BP_PlayerInteractEntityComponent:RPC_Server_RequestInteract(playerKey,entityInstanceID)
+function BP_PlayerInteractEntityComponent:RPC_Server_RequestInteract(playerKey,entityInstanceID,clientSendTime)
     GameplayUtils.Print("BP_PlayerInteractEntityComponent.RPC_Server_RequestInteract: 收到玩家",playerKey,"与实体",entityInstanceID,"交互的请求！")
 
     if not self.m_owner then
@@ -120,9 +157,25 @@ function BP_PlayerInteractEntityComponent:RPC_Server_RequestInteract(playerKey,e
         return
     end
 
+    local playerAliveState = GameplaySystem.PlayerSystem:GetPlayerAliveStateByPlayerKey(playerKey)
+    if playerAliveState ~= EPlayerAliveState.Alive then
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent.RPC_Server_RequestInteract: 玩家",playerKey,"已死亡！!")
+        self:ResponseToClient(playerKey,entityInstanceID,EInteractEntityErrCode.FailPlayerInvalid,"玩家已死亡！")
+        return--玩家已死亡
+    end
+
+    -- 查表：玩家是否已进入该实体的触发区域
     if not self.m_enteredInteractEntities[entityInstanceID] then
-        self:ResponseToClient(playerKey,entityInstanceID,EInteractEntityErrCode.FailNotOverlapped,"玩家未发生与交互实体发生碰撞！")
-        return--未与指定实体发生重叠
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent.RPC_Server_RequestInteract: 实体",entityInstanceID,"不在进入列表内，尝试重校验...")
+        -- 二次校验：直接检测玩家是否与实体发生重叠
+        if not self:_ServerVerifyPlayerOverlapWithEntity(playerKey, entityInstanceID) then
+            self:ResponseToClient(playerKey,entityInstanceID,EInteractEntityErrCode.FailNotOverlapped,"玩家未发生与交互实体发生碰撞！")
+            return
+        end
+        -- 重校验通过，补登记进列表
+        local entityComp = GameplaySystem.InteractEntitySystem:GetInteractComponentByInstanceID(entityInstanceID)
+        self.m_enteredInteractEntities[entityInstanceID] = entityComp
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent.RPC_Server_RequestInteract: 重校验通过，补登记实体",entityInstanceID)
     end
 
     ---@type Gameplay.InteractEntitySystem.InteractionRequest
@@ -133,6 +186,61 @@ function BP_PlayerInteractEntityComponent:RPC_Server_RequestInteract(playerKey,e
         CallbackFunc     = self.OnServerInteractCompleted,
     }
     GameplaySystem.InteractEntitySystem:ServerHandleInteractRequest(request)
+end
+
+---@private 服务端二次校验玩家是否与实体发生重叠
+---@param playerKey number
+---@param entityInstanceID number
+---@return boolean
+function BP_PlayerInteractEntityComponent:_ServerVerifyPlayerOverlapWithEntity(playerKey, entityInstanceID)
+    local playerPawn = UGCGameSystem.GetPlayerPawnByPlayerKey(playerKey)
+    if not playerPawn or not UE.IsValid(playerPawn) then
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent._ServerVerifyPlayerOverlapWithEntity: 玩家",playerKey,"的Pawn无效")
+        return false
+    end
+
+    local entityComp = GameplaySystem.InteractEntitySystem:GetInteractComponentByInstanceID(entityInstanceID)
+    if not entityComp or not UE.IsValid(entityComp) then
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent._ServerVerifyPlayerOverlapWithEntity: 实体",entityInstanceID,"的组件无效")
+        return false
+    end
+
+    local triggerComp = entityComp:GetInteractTriggerComponent()
+    if not triggerComp or not UE.IsValid(triggerComp) then
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent._ServerVerifyPlayerOverlapWithEntity: 实体",entityInstanceID,"的Trigger组件无效")
+        return false
+    end
+
+    -- 用玩家胶囊体做实时物理重叠查询，不依赖事件缓存
+    local playerCapsule = playerPawn:GetRootComponent()
+    if not playerCapsule or not UE.IsValid(playerCapsule) then
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent._ServerVerifyPlayerOverlapWithEntity: 玩家",playerKey,"的根组件无效")
+        return false
+    end
+
+    local OutActors = {}
+    local bOverlapped = UKismetSystemLibrary.ComponentOverlapActors(
+        playerCapsule,
+        playerCapsule:K2_GetComponentTransform(),
+        { EObjectTypeQuery.ObjectTypeQuery3 },  -- Pawn
+        nil,
+        {},
+        OutActors
+    )
+
+    local triggerOwner = entityComp:GetOwnerActor()
+    local bOverlapping = false
+    if bOverlapped then
+        for _, actor in ipairs(OutActors) do
+            if actor == triggerOwner then
+                bOverlapping = true
+                break
+            end
+        end
+    end
+
+    GameplayUtils.Print("BP_PlayerInteractEntityComponent._ServerVerifyPlayerOverlapWithEntity: 重校验结果=",tostring(bOverlapping)," | playerKey=",playerKey," | entityID=",entityInstanceID)
+    return bOverlapping
 end
 
 ---@public
@@ -231,13 +339,18 @@ function BP_PlayerInteractEntityComponent:ClientSendInteractMessage(interactEnti
     if sentTime > 0 and curTime - sentTime < 5 then
         return
     end
+    local playerAliveState = GameplaySystem.PlayerSystem:GetPlayerAliveStateByController(self.m_owner)
+    if playerAliveState ~= EPlayerAliveState.Alive then
+        return--玩家已死亡
+    end
     self.m_sentInteractRequestEntities[interactEntityInstanceID] = curTime
     UnrealNetwork.CallUnrealRPC(
             self.m_owner,
             self,
             "RPC_Server_RequestInteract",
             UGCGameSystem.GetPlayerKeyByPlayerController(self.m_owner),
-            interactEntityInstanceID
+            interactEntityInstanceID,
+            UGCGameSystem.GetServerTimeSec()
     )
 end
 
@@ -282,6 +395,10 @@ end
 
 ---@public
 function BP_PlayerInteractEntityComponent:ClientUpdateInteractionUIWidget()
+    local playerState = GameplaySystem.PlayerSystem:GetPlayerAliveStateByController(self.m_owner)
+    if playerState ~= EPlayerAliveState.Alive then--玩家生还时客户端才显示交互界面
+        return
+    end
     if self:GetInteractionUIWidget() == nil then
         self:CreateInteractionUIWidget()
     else
@@ -397,6 +514,22 @@ end
 ---@public
 function BP_PlayerInteractEntityComponent:ClientGetCurFocusedEntityID()
     return self.m_curFocusedEntityID
+end
+
+---@private 下一帧发送本帧积攒的自动交互请求（去重）
+function BP_PlayerInteractEntityComponent:_FlushPendingAutoInteractQueue()
+    if not self.m_pendingAutoInteractQueue or next(self.m_pendingAutoInteractQueue) == nil then
+        return
+    end
+    local sendCount = 0
+    for instanceID, _ in pairs(self.m_pendingAutoInteractQueue) do
+        self:ClientSendInteractMessage(instanceID)
+        sendCount = sendCount + 1
+    end
+    if sendCount > 0 then
+        GameplayUtils.Print("BP_PlayerInteractEntityComponent._FlushPendingAutoInteractQueue: 本帧发送了", sendCount, "个自动交互请求")
+    end
+    self.m_pendingAutoInteractQueue = {}
 end
 
 return BP_PlayerInteractEntityComponent

@@ -35,4 +35,25 @@ function PlayerRPC:S2C_OnGainScore(playerController,score,dmgPosition)
     )
 end
 
+
+---@public
+function PlayerRPC:Server2AllPlayersReliable(componentName,functionName,...)
+    --逐个发送消息给客户端
+    ---@type UGCPlayerController_C[]
+    local allControllers = UGCGameSystem.GetAllPlayerController()
+    local sendToComponent = type(componentName) == "string" and #componentName > 0
+    for k,pc in pairs(allControllers) do
+        if sendToComponent then
+            local component = pc[componentName]
+            if component then
+                UnrealNetwork.CallUnrealRPC(pc, component, functionName, ...)
+            else
+                GameplayUtils.Exception("PlayerRPC.Server2AllClientsReliable: ",UGCObjectUtility.GetObjectName(pc),"未包含组件 ",componentName)
+            end
+        else
+            UnrealNetwork.CallUnrealRPC(pc, pc, functionName, ...)
+        end
+    end
+end
+
 return PlayerRPC

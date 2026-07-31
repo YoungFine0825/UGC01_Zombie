@@ -27,18 +27,24 @@ function UGCGlobalDamageCalculation:GetCalculationResult(Context, ExtraResult)
     print("[UGCGlobalDamageCalculation] Context RestrictedDamageType --->"..tostring(RestrictedDamageType))
     print("[UGCGlobalDamageCalculation] Context DamageTypeTags --->"..tostring(DamageTypeTags))
 
-    --local CauserHeadDamageRatio = UGCAttributeSystem.GetGameAttributeValue(CauserActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_HeadDamageBoost) --爆头伤害加成
-
-    --local TargetDefence = UGCAttributeSystem.GetGameAttributeValue(VictimActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_Defence) --防御
-    --local TargetHeadDefenceRatio = UGCAttributeSystem.GetGameAttributeValue(VictimActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_HeadDamageResist) --爆头伤害减少
+    -- 秒杀逻辑：当攻击者InstaKill属性大于0且受害者CanInstaKill属性大于0时，受害者直接被秒杀
+    local InstaKill = UGCAttributeSystem.GetGameAttributeValue(CauserActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_InstaKill)
+    local CanInstaKill = UGCAttributeSystem.GetGameAttributeValue(VictimActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_CanInstaKill)
+    print("[UGCGlobalDamageCalculation] InstaKill: "..tostring(InstaKill)..", CanInstaKill: "..tostring(CanInstaKill))
+    if InstaKill and InstaKill > 0 and CanInstaKill and CanInstaKill > 0 then
+        print("[UGCGlobalDamageCalculation] 秒杀触发！InstaKill="..tostring(InstaKill)..", CanInstaKill="..tostring(CanInstaKill))
+        -- 返回一个极大值，确保秒杀
+        local victimHp = UGCAttributeSystem.GetGameAttributeValue(VictimActor,UGCNativeGameAttributeType.Character_Health)
+        local finalDmg = math.max(99999999,victimHp)
+        print("[UGCGlobalDamageCalculation] Params: 秒杀！ FinalDamage: ",finalDmg)
+        return finalDmg--有可能丧尸血量会变得极高，所以取最大值保险一点
+    end
 
     local existedTags = {}
     for k, TagName in pairs(Context.DamageTypeTags) do
         print("[UGCGlobalDamageCalculation] DamageTypeTags[",k,"]  ",TagName)
         existedTags[TagName] = true
     end
-
-
     local BoneDamageBoost = 1-- 部位伤害比例加成
     local UpgradeDamageBoost = 1--枪械升级后伤害加成
     local PerkDamageBoost = 1--技能包含的伤害加成
@@ -58,14 +64,23 @@ function UGCGlobalDamageCalculation:GetCalculationResult(Context, ExtraResult)
             elseif existedTags["WeaponDamageTypes.WeaponBase.MachineGun"] then--机枪
                 BoneDamageBoost = 3
             elseif existedTags["WeaponDamageTypes.WeaponBase.SubmachineGun"] then--冲锋枪
-                BoneDamageBoost = 4
+                BoneDamageBoost = 2
             end
         end
+        --单次射击子弹数量倍数
+        local BulletMultiple = UGCAttributeSystem.GetGameAttributeValue(Causer, UGCCustomGameAttributeType.UGCAttributeGroup_Weapon_BulletMultiple)
+        --基础伤害倍数
+        local BaseDamageMultiple = UGCAttributeSystem.GetGameAttributeValue(Causer, UGCCustomGameAttributeType.UGCAttributeGroup_Weapon_BaseDamageMultiple)
+        SourceMagnitude = SourceMagnitude * BulletMultiple * BaseDamageMultiple
     elseif RestrictedDamageType == ERestrictedDamageType.MeleeDamage then
         SourceMagnitude = 30--近战伤害固定
     end
 
-    local FinalDamage = SourceMagnitude * BoneDamageBoost * UpgradeDamageBoost * PerkDamageBoost
+    --目标最终伤害减伤率
+    local TargetFinalDamageResistRatio = UGCAttributeSystem.GetGameAttributeValue(VictimActor, UGCCustomGameAttributeType.UGCAttributeGroup_Character_FinalDamageResistRatio)
+
+    local FinalDamage = SourceMagnitude * BoneDamageBoost
+    FinalDamage = FinalDamage - FinalDamage * TargetFinalDamageResistRatio--最终伤害减伤
     print("[UGCGlobalDamageCalculation] Params: FinalDamage: ",FinalDamage)
     return FinalDamage
 end

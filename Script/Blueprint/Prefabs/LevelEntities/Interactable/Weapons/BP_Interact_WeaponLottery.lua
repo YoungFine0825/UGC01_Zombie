@@ -1,4 +1,5 @@
 ---@class BP_Interact_WeaponLottery_C:BP_InteractableBase_C
+---@field ParticleSystem UParticleSystemComponent
 ---@field BoxMesh UStaticMeshComponent
 ---@field InteractBehaviour_WeaponLottery InteractBehaviour_WeaponLottery_C
 --Edit Below--

@@ -13,117 +13,23 @@
 ---@field Min int32
 ---@field Sec int32
 
----@class Struct_WeaponSlotConfig
----@field SlotTag FGameplayTag
----@field SlotEnum ESurviveWeaponPropSlot
-
----@class Struct_WeaponConfig
----@field Id int32
----@field WeaponItemId int32
----@field AmmoItemId int32
----@field DeliverAmmoNumber int32
----@field WeaponName FString
----@field WeaponDesc FString
----@field WeaponLevel int32
----@field WeaponSlots Struct_WeaponSlotConfig[]
----@field WeaponClass UClass
-
----@class Struct_ItemSpawnerTypeConfig
----@field SpawnerType FName
----@field DropGroupID int32
-
----@class TableStruct_ItemSpawnScheme
----@field SchemeID int32
----@field SpawnerTypes Struct_ItemSpawnerTypeConfig[]
-
----@class TableStruct_MonsterDetails
----@field MonsterID int32
----@field MonsterName FString
----@field MonsterClass FSoftClassPath
----@field BodyHitScore int32
----@field BodyKillScore int32
----@field HeadshotKillScore int32
-
----@class Struct_MonsterGroup
----@field MonsterID int32
----@field Weight int32
-
----@class Struct_MonsterSpawnerTypeConfig
----@field SpawnerType FName
----@field Monsters Struct_MonsterGroup[]
-
----@class TableStruct_MonsterSpawnScheme
----@field SchemeID int32
----@field SpawnerTypes Struct_MonsterSpawnerTypeConfig[]
----@field RageStartRatio float
----@field RageRatioStep float
----@field RageMaxRatio float
----@field RageStartRound int32
-
----@class Struct_RandomModifier
----@field Min float
----@field Max float
-
----@class TableStruct_AffixDetails
----@field Id int32
----@field MutexExclusion FName
----@field IsPassiveSkill bool
----@field AffixesLevel int32
----@field TargetAttrType FGameAttributeContainer
----@field Description FString
----@field RandomModifier Struct_RandomModifier
----@field SkillId int32[]
----@field DecimalPlaces int32
----@field DisplayPercentage bool
-
----@class Struct_NumberRange
----@field Min int32
----@field Max int32
-
----@class Struct_RandomAffixes
----@field AffixIds int32[]
----@field NumberRange Struct_NumberRange
-
----@class TableStruct_EquippmentRandomAffix
----@field Id int32
----@field Tips FString
----@field QuantityOfAffixes int32
----@field RandomAffixes Struct_RandomAffixes[]
----@field IsRepeat bool
----@field EquipSlot FString
-
----@class FModeConfig
----@field ModeID int32
----@field ModeName FText
----@field Difficulty FText
----@field LevelCount int32
----@field UnlockDesc FText
----@field UnlockMode int32[]
----@field EnemyRefresh int32
----@field ItemRefresh int32
----@field ShopAfterLevel int32[]
----@field TrapRefresh int32
----@field SettlementExpCount int32
----@field SettlementTalentCount int32
----@field GameModeActorMgr FString
----@field FreeReviveCount int32
----@field PaidReviveCount  int32
----@field Price int32[]
-
----@class FModeDetail
----@field ID int32
----@field ModeName FText
----@field ModeDesc FText
----@field ModeBanner UTexture2D
----@field ModePost UTexture2D
----@field ModeIDs int32[]
----@field Hide bool
-
 ---@class Struct_InteractEntityAttribute
 ---@field Key FString
 ---@field Value float
 ---@field bIsTemporary bool
 ---@field Tip FString
+
+---@class ShopV2_TabInfo
+---@field TabID int32
+---@field TabName FString
+---@field TabShopName FString
+---@field TabShopDesc FString
+
+---@class Struct_TeamBuffConfig
+---@field ID int32
+---@field Name FString
+---@field Desc FString
+---@field ActorClass FSoftClassPath
 
 ---@class UGCLevelAttribute
 ---@field Attribute FGameAttributeContainer
@@ -145,6 +51,30 @@
 
 ---@class Affix
 
+---@class Struct_ItemSpawnerTypeConfig
+---@field SpawnerType FName
+---@field DropGroupID int32
+
+---@class Struct_MonsterGroup
+---@field MonsterID int32
+---@field Weight int32
+
+---@class Struct_MonsterSpawnerTypeConfig
+---@field SpawnerType FName
+---@field Monsters Struct_MonsterGroup[]
+
+---@class Struct_NumberRange
+---@field Min int32
+---@field Max int32
+
+---@class Struct_RandomAffixes
+---@field AffixIds int32[]
+---@field NumberRange Struct_NumberRange
+
+---@class Struct_RandomModifier
+---@field Min float
+---@field Max float
+
 ---@class Struct_ShowTotalAttributeAffix
 ---@field ID int32
 ---@field GameAttributeType FGameAttributeContainer
@@ -152,9 +82,49 @@
 ---@field IsShow bool
 ---@field DisplayPercentage bool
 
+---@class TableStruct_AffixDetails
+---@field Id int32
+---@field MutexExclusion FName
+---@field IsPassiveSkill bool
+---@field AffixesLevel int32
+---@field TargetAttrType FGameAttributeContainer
+---@field Description FString
+---@field RandomModifier Struct_RandomModifier
+---@field SkillId int32[]
+---@field DecimalPlaces int32
+---@field DisplayPercentage bool
+
+---@class TableStruct_EquippmentRandomAffix
+---@field Id int32
+---@field Tips FString
+---@field QuantityOfAffixes int32
+---@field RandomAffixes Struct_RandomAffixes[]
+---@field IsRepeat bool
+---@field EquipSlot FString
+
 ---@class TableStruct_ItemMapAffixId
 ---@field ItemID int32
 ---@field EquipAffixId int32
+
+---@class TableStruct_ItemSpawnScheme
+---@field SchemeID int32
+---@field SpawnerTypes Struct_ItemSpawnerTypeConfig[]
+
+---@class TableStruct_MonsterDetails
+---@field MonsterID int32
+---@field MonsterName FString
+---@field MonsterClass FSoftClassPath
+---@field BodyHitScore int32
+---@field BodyKillScore int32
+---@field HeadshotKillScore int32
+
+---@class TableStruct_MonsterSpawnScheme
+---@field SchemeID int32
+---@field SpawnerTypes Struct_MonsterSpawnerTypeConfig[]
+---@field RageStartRatio float
+---@field RageRatioStep float
+---@field RageMaxRatio float
+---@field RageStartRound int32
 
 ---@class TableStruct_Struct_SkillDetails
 ---@field id int32
@@ -197,6 +167,33 @@
 ---@field TipsArgs FString[]
 ---@field ButtonLabel FString
 
+---@class FModeConfig
+---@field ModeID int32
+---@field ModeName FText
+---@field Difficulty FText
+---@field LevelCount int32
+---@field UnlockDesc FText
+---@field UnlockMode int32[]
+---@field EnemyRefresh int32
+---@field ItemRefresh int32
+---@field ShopAfterLevel int32[]
+---@field TrapRefresh int32
+---@field SettlementExpCount int32
+---@field SettlementTalentCount int32
+---@field GameModeActorMgr FString
+---@field FreeReviveCount int32
+---@field PaidReviveCount  int32
+---@field Price int32[]
+
+---@class FModeDetail
+---@field ID int32
+---@field ModeName FText
+---@field ModeDesc FText
+---@field ModeBanner UTexture2D
+---@field ModePost UTexture2D
+---@field ModeIDs int32[]
+---@field Hide bool
+
 ---@class Talent
 ---@field ID int32
 ---@field Name FText
@@ -219,6 +216,32 @@
 ---@field LimitType LimitType
 ---@field Description FText[]
 ---@field UnlockDescription FText[]
+
+---@class Struct_PlayerSodaConfig
+---@field ID int32
+---@field ItemID int32
+---@field Name FString
+---@field Desc FString
+---@field BuffClass FSoftClassPath
+---@field BuffTag FGameplayTag
+
+---@class Struct_WeaponConfig
+---@field Id int32
+---@field WeaponItemId int32
+---@field MinWeaponNum int32
+---@field MaxWeaponNum int32
+---@field AmmoItemId int32
+---@field DeliverAmmoNumber int32
+---@field WeaponName FString
+---@field WeaponDesc FString
+---@field WeaponLevel int32
+---@field WeaponSlots Struct_WeaponSlotConfig[]
+---@field WeaponClass FSoftClassPath
+---@field GrenadeClass FSoftClassPath
+
+---@class Struct_WeaponSlotConfig
+---@field SlotTag FGameplayTag
+---@field SlotEnum ESurviveWeaponPropSlot
 
 ---@class Hero
 ---@field ID int32
@@ -275,9 +298,7 @@
 ---@field RefreshNum int32
 ---@field Price int32
 
----@class ShopV2_TabInfo
----@field TabID int32
----@field TabName FString
----@field TabShopName FString
----@field TabShopDesc FString
+---@class Struct_TeamBuffDropInfo
+---@field TeamBuffClass FSoftClassPath
+---@field Weight float
 

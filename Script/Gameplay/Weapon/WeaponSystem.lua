@@ -8,6 +8,24 @@ function WeaponSystem:Ctor()
 
 end
 
+---获取主武器槽位名称
+---@public
+---@return string[] @槽位名称列表
+function WeaponSystem:GetMainWeaponSlots()
+    return {"EquipmentSlot.Core.MainSlot1", "EquipmentSlot.Core.MainSlot2"}
+end
+
+---获取所有武器槽位名称
+---@public
+---@return string[] @槽位名称列表
+function WeaponSystem:GetAllWeaponSlots()
+    return {
+        "EquipmentSlot.Core.MainSlot1",--武器1
+        "EquipmentSlot.Core.MainSlot2",--武器2
+        "EquipmentSlot.Core.SubSlot",--手雷（原本为手枪槽位，先作为手雷槽位）
+    }
+end
+
 ---@public 获取可用的武器槽位
 ---@return string 槽位名称
 ---@return boolean 返回的槽位是否是空槽位
@@ -73,100 +91,18 @@ function WeaponSystem:GetCurrentWeaponConfigID(playerPawn)
     return curWeaponConfigID
 end
 
----@public 向玩家派发武器到背包
+---@private 补充满武器道具
 ---@param player PlayerPawn | PlayerController
----@param weaponConfigId number
----@return boolean,ItemDefineID
-function WeaponSystem:DeliverWeaponToPlayer(player,weaponConfigId)
-    if player == nil then
-        Print("WeaponSystem.DeliverWeaponToPlayer: player is nil")
-        return false
+function WeaponSystem:Internal_ServerReplenishWeaponItem(player,itemId,maxNum)
+    if itemId <= 0 then
+        return
     end
-    if not UGCBackpackSystemV2.CheckInitPersistCompleted(player) then
-        Print("WeaponSystem.DeliverWeaponToPlayer: Persist not ready")
-        return false
-    end
-    local weaponConfig = GameplaySystem.WeaponConfigMgr:GetWeaponConfigData(weaponConfigId)
-    if not weaponConfig then
-        return false
-    end
-    local weaponItemId = weaponConfig.WeaponItemId
-    local weaponAmmoId = weaponConfig.AmmoItemId
-    self:Internal_ServerDeliverWeaponMagAmmo(player,weaponAmmoId,weaponConfig.DeliverAmmoNumber)
-    local addWeapSuccessful = false
-    local weaponDefineId = 0
-    if UGCBackpackSystemV2.GetItemCountV2(player,weaponItemId) > 0 then--同种武器只能存在一把
-        addWeapSuccessful = true
-        weaponDefineId = GameplaySystem.BackpackSystem:GetGainedItemDefineId(player,weaponItemId)
-    else
-        addWeapSuccessful,weaponDefineId = GameplaySystem.BackpackSystem:DeliverItemToPlayer(player,weaponItemId,1)
-    end
-    if not addWeapSuccessful then
-        Print("[WeaponSystem.DeliverWeaponToPlayer: 添加默认武器道具进背包失败！！！")
-    end
-    if weaponDefineId == nil then
-        Print("WeaponSystem.DeliverWeaponToPlayer: 无法找到武器道具的DefineID！！！")
-        return false
-    end
-    return addWeapSuccessful,weaponDefineId
-end
-
----@public 让玩家装备以获取的武器
----@param player PlayerPawn | PlayerController
----@param weaponConfigId number
----@param weaponSlotName string
----@return boolean
-function WeaponSystem:EquipGainedWeapon(player,weaponConfigId,weaponSlotName)
-    if player == nil then
-        Exception("WeaponSystem.EquipGainedWeapon： player is nil")
-        return false
-    end
-    local weaponConfig = GameplaySystem.WeaponConfigMgr:GetWeaponConfigData(weaponConfigId)
-    if not weaponConfig then
-        Exception("WeaponSystem.EquipGainedWeapon： 武器配置不存在！")
-        return false
-    end
-    local weaponItemId = weaponConfig.WeaponItemId
-    local weaponDefineId = GameplaySystem.BackpackSystem:GetGainedItemDefineId(player,weaponItemId)
-    if weaponDefineId == nil then
-        Exception("WeaponSystem.EquipGainedWeapon： 未获得武器!!")
-        return false
-    end
-    --
-    local isWeaponSlotEnabled = UGCBackpackSystemV2.GetEquipSlotEnable(player,weaponSlotName)
-    if not isWeaponSlotEnabled  then
-        UGCBackpackSystemV2.SetEquipSlotEnable(player,weaponSlotName)
-    end
-    --
-    if not UGCBackpackSystemV2.ItemCanEquipToSlot(player, weaponItemId, weaponSlotName) then
-        Exception("WeaponSystem.EquipGainedWeapon： 槽位",weaponSlotName,"无法装备武器",weaponItemId)
-        return false
-    end
-    --
-    local equipped = UGCBackpackSystemV2.GetEquippedItemBySlotName(player, weaponSlotName)
-    if equipped and equipped.InstanceID == weaponDefineId.InstanceID then
-        return true--已装备
-    end
-    --
-    local equipSuccess = UGCBackpackSystemV2.EquipItemV2(player, weaponSlotName, weaponDefineId)
-    if equipSuccess then
-        Print("WeaponSystem.EquipGainedWeapon： 装备武器成功！！！weaponDefineId="..weaponConfigId)
-    else
-        Exception("WeaponSystem.EquipGainedWeapon： 装备武器失败！！！ weaponDefineId="..weaponConfigId)
-    end
-    return equipSuccess
-end
-
----@private
----@param player PlayerPawn | PlayerController
-function WeaponSystem:Internal_ServerDeliverWeaponMagAmmo(player,ammoItemId,maxAmmoNum)
-    -- 已拥有该类型子弹时，把 DeliverAmmoNumber 视为上限，仅补充到上限的差额
-    local currentAmmo = UGCBackpackSystemV2.GetItemCountV2(player, ammoItemId) or 0
-    local ammoToDeliver = math.max(0, maxAmmoNum - currentAmmo)
-    if ammoToDeliver > 0 then
-        local actualAmmoCnt, _ = UGCBackpackSystemV2.AddItemV2(player, ammoItemId, ammoToDeliver)
+    local currentNum = UGCBackpackSystemV2.GetItemCountV2(player, itemId) or 0
+    local itemToDeliver = math.max(0, maxNum - currentNum)
+    if itemToDeliver > 0 then
+        local actualAmmoCnt, _ = UGCBackpackSystemV2.AddItemV2(player, itemId, itemToDeliver)
         if actualAmmoCnt <= 0 then
-            Print(string.format("WeaponSystem.Internal_ServerDeliverWeaponMagAmmo: 补充子弹失败！AmmoItemId=%d, 期望补充=%d", ammoItemId, ammoToDeliver))
+            Print(string.format("WeaponSystem.Internal_ServerReplenishWeaponItem: 补满道具失败！ItemId=%d, 期望补充=%d", itemId, itemToDeliver))
         end
     end
 end
@@ -185,8 +121,10 @@ function WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,weaponConfig
     local weaponConfig = GameplaySystem.WeaponConfigMgr:GetWeaponConfigData(weaponConfigId)
     local isWeaponEquipped = self:IsWeaponEquipped(playerKey,weaponConfigId)
     if isWeaponEquipped then
+        --补充满武器数量
+        self:Internal_ServerReplenishWeaponItem(playerController,weaponConfig.WeaponItemId,weaponConfig.MaxWeaponNum)
         --已装备的武器，不重新装备，直接加满后备弹药后返回
-        self:Internal_ServerDeliverWeaponMagAmmo(playerController,weaponConfig.AmmoItemId,weaponConfig.DeliverAmmoNumber)
+        self:Internal_ServerReplenishWeaponItem(playerController,weaponConfig.AmmoItemId,weaponConfig.DeliverAmmoNumber)
         return true
     end
     --
@@ -196,17 +134,19 @@ function WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,weaponConfig
         return false
     end
     --
-    local curWeaponCofnigId = self:GetCurrentWeaponConfigID(playerPawn)
-    Print("WeaponSystem.ServerDeliverAndEquipWeaponToPlayer: 玩家",playerKey,"当前持有武器",curWeaponCofnigId)
+    local curWeaponCofnigId = self:GetPlayerWeaponConfigIDBySlot(playerKey,weaponSlotName)
+    Print("WeaponSystem.ServerDeliverAndEquipWeaponToPlayer: 玩家 ",playerKey," 的槽位 ",weaponSlotName," 当前装备武器 ",curWeaponCofnigId)
     local addWeapSuccessful = false
     local weaponItemId = weaponConfig.WeaponItemId
+    local curWeaponItemNum = UGCBackpackSystemV2.GetItemCountV2(playerPawn,weaponItemId)
     ---@type ItemDefineID
     local weaponDefineId = nil
-    if UGCBackpackSystemV2.GetItemCountV2(playerPawn,weaponItemId) > 0 then--同种武器只能存在一把
+    if curWeaponItemNum > weaponConfig.MaxWeaponNum then--武器数量已满
         addWeapSuccessful = true
         weaponDefineId = GameplaySystem.BackpackSystem:GetGainedItemDefineId(playerPawn,weaponItemId)
     else
-        addWeapSuccessful,weaponDefineId = GameplaySystem.BackpackSystem:DeliverItemToPlayer(playerPawn,weaponItemId,1)
+        local neededWeaponNum = math.max(0, weaponConfig.MaxWeaponNum - curWeaponItemNum)--只派发缺省数量
+        addWeapSuccessful,weaponDefineId = GameplaySystem.BackpackSystem:DeliverItemToPlayer(playerPawn,weaponItemId,neededWeaponNum)
     end
     if not addWeapSuccessful then
         Exception("[WeaponSystem.ServerDeliverAndEquipWeaponToPlayer: 添加默认武器道具进背包失败！！！")
@@ -225,7 +165,7 @@ function WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,weaponConfig
         end
     end
     --派发弹药道具
-    self:Internal_ServerDeliverWeaponMagAmmo(playerPawn,weaponConfig.AmmoItemId,weaponConfig.DeliverAmmoNumber)
+    self:Internal_ServerReplenishWeaponItem(playerPawn,weaponConfig.AmmoItemId,weaponConfig.DeliverAmmoNumber)
     --
     if not UGCBackpackSystemV2.ItemCanEquipToSlot(playerPawn, weaponItemId, weaponSlotName) then
         Exception("WeaponSystem.ServerDeliverAndEquipWeaponToPlayer： 槽位",weaponSlotName,"无法装备武器",weaponItemId)
@@ -252,8 +192,10 @@ function WeaponSystem:ServerRemoveEquippedWeapon(player,weaponConfigID)
     end
     --移除子弹
     local weaponAmmoId = weaponConfig.AmmoItemId
-    local ammoCnt = UGCBackpackSystemV2.GetItemCountV2(player,weaponAmmoId)
-    UGCBackpackSystemV2.RemoveItemV2(player,weaponAmmoId,ammoCnt)
+    if weaponAmmoId > 0 then
+        local ammoCnt = UGCBackpackSystemV2.GetItemCountV2(player,weaponAmmoId)
+        UGCBackpackSystemV2.RemoveItemV2(player,weaponAmmoId,ammoCnt)
+    end
     --
     local weaponItemId = weaponConfig.WeaponItemId
     local curCnt = UGCBackpackSystemV2.GetItemCountV2(player,weaponItemId)
@@ -262,8 +204,9 @@ function WeaponSystem:ServerRemoveEquippedWeapon(player,weaponConfigID)
 end
 
 ---@public
-function WeaponSystem:GetDefaultWeaponID(playerKey)
-    return 10011
+---@return number[]
+function WeaponSystem:GetDefaultWeaponIDList(playerKey)
+    return {10011,10091}
 end
 
 ---@public 是否以获得指定武器
@@ -292,6 +235,17 @@ function WeaponSystem:GetWeaponActorByConfigID(playerKey,weaponConfigID)
         end
     end
     return nil,0
+end
+
+---@public 获取武器数量
+function WeaponSystem:GetWeaponNumber(playerKey,weaponConfigID)
+    local playerPawn = UGCGameSystem.GetPlayerPawnByPlayerKey(playerKey)
+    if not playerPawn then
+        return 0
+    end
+    local weaponItemID = GameplaySystem.WeaponConfigMgr:GetWeaponItemIDByConfigID(weaponConfigID)
+    local ret = UGCBackpackSystemV2.GetItemCountV2(playerPawn,weaponItemID)
+    return ret
 end
 
 ---@public 获取指定武器当前弹匣内子弹数量
@@ -333,6 +287,69 @@ function WeaponSystem:SwitchMainWeaponSlot(playerKey,targetMainSlot)
         slotEnum = ESurviveWeaponPropSlot.SWPS_MainShootWeapon2
     end
     UGCWeaponManagerSystem.SwitchWeaponBySlot(playerPawn,slotEnum,true)
+end
+
+---@public
+---@return number[]
+function WeaponSystem:GetPlayerWeaponConfigIDBySlot(playerKey,slotName)
+    local playerController = UGCGameSystem.GetPlayerControllerByPlayerKey(playerKey)
+    if not playerController then
+        return 0
+    end
+    local itemDefineID = UGCBackpackSystemV2.GetEquippedItemBySlotName(playerController,slotName)
+    if itemDefineID and itemDefineID.TypeSpecificID > 0 then
+        local weaponConfigID = GameplaySystem.WeaponConfigMgr:GetWeaponConfigIDByItemID(itemDefineID.TypeSpecificID)
+        return weaponConfigID
+    end
+    return 0
+end
+
+---@public
+---@return number[]
+function WeaponSystem:GetPlayerEquippedWeaponsConfigID(playerKey)
+    local playerController = UGCGameSystem.GetPlayerControllerByPlayerKey(playerKey)
+    if not playerController then
+        return {}
+    end
+    local allWeaponSlots = self:GetAllWeaponSlots()
+    local ret = {}
+    for k,slotName in pairs(allWeaponSlots) do
+        local itemDefineID = UGCBackpackSystemV2.GetEquippedItemBySlotName(playerController,slotName)
+        if itemDefineID and itemDefineID.TypeSpecificID > 0 then
+            local weaponConfigID = GameplaySystem.WeaponConfigMgr:GetWeaponConfigIDByItemID(itemDefineID.TypeSpecificID)
+            table.insert(ret,weaponConfigID)
+        end
+    end
+    return ret
+end
+
+---@public 补充武器以及弹药
+function WeaponSystem:ServerReplenishWeaponAndAmmos(playerKey,weaponConfigID)
+    local playerController = UGCGameSystem.GetPlayerControllerByPlayerKey(playerKey)
+    if not UGCBackpackSystemV2.CheckInitPersistCompleted(playerController) then
+        Print("WeaponSystem.ServerReplenishWeaponAndAmmos: Persist not ready")
+        return false
+    end
+    local weaponConfig = GameplaySystem.WeaponConfigMgr:GetWeaponConfigData(weaponConfigID)
+    local isWeaponEquipped = self:IsWeaponEquipped(playerKey,weaponConfigID)
+    if not isWeaponEquipped then
+        return false
+    end
+    --补充满武器数量
+    self:Internal_ServerReplenishWeaponItem(playerController,weaponConfig.WeaponItemId,weaponConfig.MaxWeaponNum)
+    --加满后备弹药
+    self:Internal_ServerReplenishWeaponItem(playerController,weaponConfig.AmmoItemId,weaponConfig.DeliverAmmoNumber)
+    return true
+end
+
+---@public 是否应该补充武器自身的数量
+function WeaponSystem:ShouldReplenishWeaponSelfCount(weaponConfigID)
+    local weaponConfig = GameplaySystem.WeaponConfigMgr:GetWeaponConfigData(weaponConfigID)
+    if not weaponConfig then
+        return false
+    end
+    local ret = weaponConfig.AmmoItemId <= 0
+    return ret
 end
 
 return WeaponSystem

@@ -16,6 +16,7 @@
 ---@field MaxHitCount int32
 ---@field LeftHitCount int32
 ---@field bIsBroken bool
+---@field bDefaultActive bool
 --Edit Below--
 ---@type BP_EntryForZombie_Base_C:BP_UGC_DamagableActor_C
 local BP_EntryForZombie_Base = {
@@ -40,6 +41,8 @@ BP_EntryForZombie_Base.m_passingQueue = {}
 function BP_EntryForZombie_Base:ReceiveBeginPlay()
     BP_EntryForZombie_Base.SuperClass.ReceiveBeginPlay(self)
     --
+    self.m_isActived = self.bDefaultActive
+    --
     self.AllPositionSlots = {
         self.PosSlot1,
         self.PosSlot2,
@@ -56,7 +59,7 @@ function BP_EntryForZombie_Base:ReceiveBeginPlay()
     self.bIsBroken = false
     --
     self:RegisterToLevelActor()
-    --
+    self:UpdatePlanksVisible()
 end
 
 
@@ -70,6 +73,31 @@ function BP_EntryForZombie_Base:ReceiveEndPlay()
     self.OccupiedPositionsSlotsIndex = {}
     self.PositionSlot2ZombiePawn = {}
     self:UnregisterFromLevelActor()
+end
+
+function BP_EntryForZombie_Base:GetReplicatedProperties()
+    return {"m_isActived","Lazy"}
+end
+
+---@public
+---@return boolean
+function BP_EntryForZombie_Base:IsActive()
+    return self.m_isActived
+end
+
+---@private
+function BP_EntryForZombie_Base:OnRep_m_isActived()
+    GameplayUtils.Print("BP_EntryForZombie_Base.OnRep_m_isActived: 丧尸入口 ",UGCObjectUtility.GetObjectName(self)," 激活！")
+end
+
+---@public 激活入口
+function BP_EntryForZombie_Base:ServerActivate()
+    if not UGCGameSystem.IsServer() then
+        return
+    end
+    self.m_isActived = true
+    UnrealNetwork.RepLazyProperty(self,"m_isActived")
+    GameplayUtils.Print("BP_EntryForZombie_Base.ServerActivate: 丧尸入口 ",UGCObjectUtility.GetObjectName(self)," 激活！")
 end
 
 ---受击前置事件
@@ -160,9 +188,9 @@ end
 function BP_EntryForZombie_Base:RegisterToLevelActor()
     if UGCGameSystem.IsServer() then
         if GameplaySystem.MonsterAISystem:RegisterZombieEntry(self) then
-            GameplayUtils.Print("BP_EntryForZombie_Base.RegisterToLevelActor: 注册入口成功！")
+            --GameplayUtils.Print("BP_EntryForZombie_Base.RegisterToLevelActor: 注册入口成功！")
         else
-            GameplayUtils.Print("BP_EntryForZombie_Base.RegisterToLevelActor: 注册入口失败！")
+            GameplayUtils.Exception("BP_EntryForZombie_Base.RegisterToLevelActor: 注册入口失败！")
         end
     end    
 end

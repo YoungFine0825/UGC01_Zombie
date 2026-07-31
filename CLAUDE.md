@@ -57,6 +57,24 @@
 
 **准则生效的标志：** diff 中不必要的改动减少，因过度复杂导致的返工减少，澄清性问题在实现前提出而非在犯错后。
 
+### 5. API 准确性优先 — 不确定的 API 不用
+
+在调用任何 API（Lua 函数、C++ 方法、UE 引擎接口、UGC 系统接口）之前，必须通过以下途径**确认其签名、参数类型、返回值**：
+
+- `.projdoc/api/` 中的官方 API 文档
+- `F:\Games\UE_4.18` 中的 UE 4.18 源码
+- `.projdoc/wiki/` 中的官方 Wiki 文档
+- `D:\Games\WeGameApps\rail_apps\OasisEraEditor(2001776)\ShadowTrackerExtra\UGCProjects\Template_*` 官方模板项目中的实际用法
+
+**禁止的行为：**
+- 禁止凭其他 UE 版本的记忆猜测 API 签名（如用 UE5 的 API 名在 UE 4.18 中调用）
+- 禁止假设 API 参数类型（如分不清 `FSoftClassPath` 和 `UClass`、`ECollisionChannel` 和 `EObjectTypeQuery`）
+- 禁止使用未经验证的枚举值（如 `EObjectTypeQuery.WorldDynamic` 而非 `EObjectTypeQuery.ObjectTypeQuery2`）
+
+**验证失败时的处理：**
+1. 若无法确认 API 的准确信息 → 查找意义明确的替代 API
+2. 若无替代品 → **不编写任何代码，不给出方案**，向用户说明缺少哪些信息
+
 ---
 
 ## 项目概述

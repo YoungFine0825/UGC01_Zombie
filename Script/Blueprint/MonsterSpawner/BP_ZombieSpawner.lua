@@ -107,7 +107,7 @@ function BP_ZombieSpawner:CanSpawnZombie()
         for i = 1,self.Entry:Num() do
             ---@type BP_EntryForZombie_Base_C
             local entry = self.Entry:Get(i)
-            if UE.IsValid(entry) then
+            if UE.IsValid(entry) and entry:IsActive() then
                 validEntries = validEntries + 1
                 if entry:HaveFreePositionSlots() then
                     freePositionsNum = freePositionsNum + 1

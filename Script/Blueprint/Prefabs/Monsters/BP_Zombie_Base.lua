@@ -19,7 +19,9 @@ local BP_Zombie_Base = {
 BP_Zombie_Base.m_configID = 0
 
 function BP_Zombie_Base:ReceiveBeginPlay()
-    BP_Zombie_Base.SuperClass.ReceiveBeginPlay(self)
+    if BP_Zombie_Base.SuperClass then
+        BP_Zombie_Base.SuperClass.ReceiveBeginPlay(self)
+    end
     ---
     self.HitBoxRadius = self.HitBox:GetUnscaledCapsuleRadius()
     self.HitBoxHalfHeight = self.HitBox:GetUnscaledCapsuleHalfHeight()
@@ -29,13 +31,7 @@ function BP_Zombie_Base:ReceiveBeginPlay()
     self.CapsuleHalfHeight = capsuleComp:GetUnscaledCapsuleHalfHeight()
     ---
     if self:HasAuthority() then
-        local gameState = GameplaySystem.GetGameplayStateComponent()
-        local curRound = gameState.RoundFlowInfo.CurRoundNum
-        local hp = GameplaySystem.ZombieSpawnSystem:CalcuMaxZombieHealth(curRound,100)
-        --初始化血量
-        --UGCAttributeSystem.SetGameAttributeValue(self, 'BaseHealth', hp)
-        --UGCAttributeSystem.SetGameAttributeValue(self, 'HealthMax', hp)
-        --UGCAttributeSystem.SetGameAttributeValue(self, 'UGCGeneralMoveSpeedScale', 2.0)
+        GameplaySystem.ZombieSpawnSystem:SetZombieCanBeInstaKill(self,true)
     end
 end
 

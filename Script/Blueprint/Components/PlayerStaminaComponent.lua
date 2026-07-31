@@ -1,6 +1,5 @@
 ---@class PlayerStaminaComponent_C:ActorComponent
 ---@field ConsumeSpeed float
----@field ConsumeSpeedScalar float
 ---@field RecoverSpeed float
 ---@field RecoverDelay float
 ---@field MinimalRequired float
@@ -96,7 +95,8 @@ end
 
 function PlayerStaminaComponent:TryConsumeStamina(DeltaTime)
     local curStamina = self:GetCurStamina()
-    local newCurStamina = curStamina - self.ConsumeSpeed * DeltaTime
+    local consumeScalar = UGCAttributeSystem.GetGameAttributeValue(self.OwnerActor,"StaminaConsumeScalar")
+    local newCurStamina = curStamina - self.ConsumeSpeed * consumeScalar * DeltaTime
     if newCurStamina < 0 then
        newCurStamina = 0 
     end

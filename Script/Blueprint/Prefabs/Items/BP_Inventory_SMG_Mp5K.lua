@@ -1,4 +1,4 @@
----@class BP_Inventory_Mp5K_C:Template_MachineGun_MP5K_C
+---@class BP_Inventory_SMG_Mp5K_C:Template_MachineGun_MP5K_C
 --Edit Below--
 local BP_Inventory_SMG_Mp5K = {} 
 

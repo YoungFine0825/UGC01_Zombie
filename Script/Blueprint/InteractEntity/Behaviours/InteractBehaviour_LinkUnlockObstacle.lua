@@ -2,7 +2,6 @@
 ---@field LinkedObstacles ULuaArrayHelper<BP_InteractableBase_C>
 ---@field SkipBehaviours ULuaArrayHelper<FGameplayTag>
 --Edit Below--
---Edit Below--
 local BPExtent = UGCGameSystem.UGCRequire("Script.Gameplay.BPExtend")
 ---@type InteractBehaviour_LinkUnlockObstacle_C
 local InteractBehaviour_LinkUnlockObstacle = BPExtent({},"Script.Blueprint.InteractEntity.Behaviours.BP_interactEntityBehaviourComponent")
@@ -44,7 +43,9 @@ function InteractBehaviour_LinkUnlockObstacle:PreExecute(playerKey)
                 IgnoreConditionChecking = true,--跳过条件检查
             }
             for j = 1,self.SkipBehaviours:Num() do
-                table.insert(request.skipBehaviours,self.SkipBehaviours:Get(j))
+                ---@type FGameplayTag
+                local gameplayTag = self.SkipBehaviours:Get(j)
+                table.insert(request.skipBehaviours,gameplayTag)
             end
             --让请求者的PlayerController去处理
             ---@type UGCPlayerController_C

@@ -1,4 +1,5 @@
 ---@class BP_Interact_WeaponSeller_C:BP_InteractableBase_C
+---@field InteractBehaviour_PlaySound InteractBehaviour_PlaySound_C
 ---@field InteractBehaviour_PurchaseWeapon InteractBehaviour_PurchaseWeapon_C
 --Edit Below--
 local BPExtent = UGCGameSystem.UGCRequire("Script.Gameplay.BPExtend")

@@ -1,8 +1,10 @@
+---@class BP_ServerGameplayComponent_C:ActorComponent
+--Edit Below--
 --[[
     局内游戏基础服务端逻辑组件，主要用于控制游戏流程，挂在LevelActor上
 
 --]]
----@class BP_ServerGameplayComponent_C
+---@type BP_ServerGameplayComponent_C
 local BP_ServerGameplayComponent = {
     ---@type boolean
     bGameplayStarted = false,

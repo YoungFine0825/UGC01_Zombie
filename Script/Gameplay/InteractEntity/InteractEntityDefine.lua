@@ -17,4 +17,5 @@ EInteractEntityErrCode = {
     FailNotOverlapped = 13, --未发生碰撞
     FailAmmoAlreadyFully = 14,--已是满弹药状态
     FailAlreadyDrawing = 15,--
+    FailWeaponAlreadyFully = 16,
 }

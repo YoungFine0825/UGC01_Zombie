@@ -123,24 +123,20 @@ function UGCGameState:OnPlayerDying(PlayerKey)
    ugcprint("UGCGameState:OnPlayerDying Current Dying Player Num=" .. tostring(DyingPlayerNum))
 
    local SelfRescue = UGCGameplayTagSystem.RequestGameplayTag("PawnState.Buff.SelfRescue")
-   local PlayerNum = #self.PlayerArray
-   if DyingPlayerNum >= PlayerNum then
-      local anyoneCanSelfRescue = false--队伍中是否有成员有自救能力
-      for k,ps in pairs(self.PlayerArray) do
-         ---@type UGCPlayerPawn_C
-         local playerPawn = UGCGameSystem.GetPlayerPawnByPlayerState(ps)
-         if UGCPersistEffectSystem.HasDynamicState(playerPawn,SelfRescue) then
-            anyoneCanSelfRescue = true
-         end
-      end
-      if not anyoneCanSelfRescue then
+   local PlayerNum = GameplaySystem.PlayerSystem:GetCurrentPlayerNum()
+   if PlayerNum > 1 then
+      if DyingPlayerNum >= PlayerNum then--大于1名玩家时，如果所有玩家都倒地了，则判断为全员阵亡
          --所有濒死角色判定为死亡
          for playerKey,v in pairs(self.DyingPlayerKeys) do
-            self.DeadPlayerKeys[playerKey] = true
+            GameplaySystem.PlayerSystem:ServerKillPlayer(playerKey)
          end
-         --
-         --全体倒地且没有人有自救能力，则判定全员阵亡
-         GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Server.OnAllPlayersDead)
+      end
+   else
+      if GameplaySystem.PlayerSystem:ShouldPlayerDirectlyDie(PlayerKey) then--只有一名玩家，且没有自救能力，则判断为全员阵亡
+         GameplaySystem.PlayerSystem:ServerKillPlayer(PlayerKey)
+      else
+         --让玩家开始自救
+         GameplaySystem.PlayerSystem:ServerStartSelfRescue(PlayerKey)
       end
    end
 end
@@ -158,7 +154,7 @@ function UGCGameState:OnPlayerDead(PlayerKey)
    end
    ugcprint("UGCGameState:OnPlayerDead Current DeadPlayerNum=" .. tostring(DeadPlayerNum))
 
-   local PlayerNum = #self.PlayerArray
+   local PlayerNum = GameplaySystem.PlayerSystem:GetCurrentPlayerNum()
    if DeadPlayerNum >= PlayerNum then
       --全员阵亡
       GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Server.OnAllPlayersDead)
@@ -204,7 +200,7 @@ function UGCGameState:OnRep_PortalInfo()
 end
 
 function UGCGameState:OnRep_CurrentRespawnChanceCountDown()
-   BreakthroughManager:RefreshRespawnUICountDown(self.CurrentRespawnChanceCountDown)
+
 end
 
 function UGCGameState:OnRep_LobbyInfo()

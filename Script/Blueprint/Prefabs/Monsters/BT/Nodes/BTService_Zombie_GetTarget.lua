@@ -11,28 +11,35 @@ function BTService_Zombie_GetTarget:ReceiveTickAI(OwnerController, ControlledPaw
     -- 在此实现每帧逻辑
     ---@type BP_Zombie_Base_C
     local zombiePawn = ControlledPawn
-    local targetPlayer = zombiePawn:ServerGetCurrentTargetPlayer()
-    if targetPlayer then
-        local blackboard = OwnerController.Blackboard
-        local playerState = GameplaySystem.PlayerSystem:GetPlayerAliveState(targetPlayer)
-        if playerState ~= EPlayerAliveState.Alive then
-            GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 目标玩家已死亡，寻找其他目标！")
-            local alivePlayer = GameplaySystem.MonsterAISystem:ServerFindNearstPlayerAsTarget(ControlledPawn)
-            zombiePawn:ServerTrackingPlayer(alivePlayer)
-            if not alivePlayer then
-                GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 未找到目标玩家")
-            end
-        else
-            blackboard:SetValueAsObject("Target", targetPlayer)
-        end
-    else
+    if not zombiePawn.bIsSpawnedOutside then
         local alivePlayer = GameplaySystem.MonsterAISystem:ServerFindNearstPlayerAsTarget(ControlledPawn)
-        if alivePlayer then
-            zombiePawn:ServerTrackingPlayer(alivePlayer)
-        else
+        zombiePawn:ServerTrackingPlayer(alivePlayer)
+        if not alivePlayer then
             GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 未找到目标玩家")
         end
     end
+    --local targetPlayer = zombiePawn:ServerGetCurrentTargetPlayer()
+    --if targetPlayer then
+    --    local blackboard = OwnerController.Blackboard
+    --    local playerState = GameplaySystem.PlayerSystem:GetPlayerAliveState(targetPlayer)
+    --    if playerState ~= EPlayerAliveState.Alive then
+    --        GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 目标玩家已死亡，寻找其他目标！")
+    --        local alivePlayer = GameplaySystem.MonsterAISystem:ServerFindNearstPlayerAsTarget(ControlledPawn)
+    --        zombiePawn:ServerTrackingPlayer(alivePlayer)
+    --        if not alivePlayer then
+    --            GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 未找到目标玩家")
+    --        end
+    --    else
+    --        blackboard:SetValueAsObject("Target", targetPlayer)
+    --    end
+    --else
+    --    local alivePlayer = GameplaySystem.MonsterAISystem:ServerFindNearstPlayerAsTarget(ControlledPawn)
+    --    if alivePlayer then
+    --        zombiePawn:ServerTrackingPlayer(alivePlayer)
+    --    else
+    --        GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 未找到目标玩家")
+    --    end
+    --end
 end
 
 --- 服务激活事件

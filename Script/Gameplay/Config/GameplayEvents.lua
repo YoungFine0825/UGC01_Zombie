@@ -16,6 +16,7 @@ local Events = {
         OnPlayerAliveStateChanged = "GameplayEvents.Server.OnPlayerAliveStateChanged",
         OnAllPlayersDead = "GameplayEvents.Server.OnAllPlayersDead",
         OnPlayerInteractionCompleted = "GameplayEvents.Server.OnPlayerInteractionCompleted",
+        OnTeamBuffPicked = "GameplayEvents.Server.OnTeamBuffPicked",--TeamBuff掉落物被拾取(manager,pickupActor,playerKey)
     },
     --仅在客户端广播
     Client = {

@@ -196,4 +196,9 @@ function ZombieSpawnSystem:GetZombieDetailsConfig(id)
     return nil
 end
 
+---@public
+function ZombieSpawnSystem:SetZombieCanBeInstaKill(zombiePawn,enabled)
+    UGCAttributeSystem.SetGameAttributeValue(zombiePawn,'CanInstaKill',enabled and 1 or 0)
+end
+
 return ZombieSpawnSystem

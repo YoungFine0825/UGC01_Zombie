@@ -61,4 +61,21 @@ function BP_PlayerInGameStatDataComponent:ClearAllStatData()
 
 end
 
+---@public
+function BP_PlayerInGameStatDataComponent:AddScore(score)
+    self:AddStatData(EPlayerInGameStatKeys.Score,score)
+    self:AddStatData(EPlayerInGameStatKeys.TotalScore,score)
+end
+
+---@public
+function BP_PlayerInGameStatDataComponent:GetCurScore()
+    return self:GetStatData(EPlayerInGameStatKeys.Score)
+end
+
+
+---@public
+function BP_PlayerInGameStatDataComponent:GetTotalScore()
+    return self:GetStatData(EPlayerInGameStatKeys.TotalScore)
+end
+
 return BP_PlayerInGameStatDataComponent

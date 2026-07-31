@@ -1,5 +1,4 @@
 ---@class UGCPlayerState_C:BP_UGCPlayerState_C
----@field WeaponSystemComponent BP_PlayerStateWeaponSystemComponent_C
 ---@field PlayerInGameStatDataComponent BP_PlayerInGameStatDataComponent_C
 ---@field PlayerExp int32
 ---@field UGCPlayerLevel int32
@@ -208,7 +207,7 @@ function UGCPlayerState:OnPlayerEnter(_,PlayerKey)
     -- 英雄选择
     local ModeID = UGCMultiMode.GetModeID()
     if self:ReadHeroID() < 0 then self:SaveHeroID(HeroSelectionManager:GetFirstAvailableHeroID()) end
-    if UGCGameData.GetGameModeName(ModeID) == UGCGameData.ModeName.Lobby then
+    if GameplaySystem.IsInLobby() then
         local function SelectHeroFromArchiveData()
             local PlayerKey = UGCGameSystem.GetPlayerKeyByPlayerState(self)
             --if HeroSelectionManager:GetSelectedHeroID(PlayerKey) ~= self:ReadHeroID() then
@@ -297,10 +296,11 @@ function UGCPlayerState:OnMobPawnTakeDamage(MobPawn, DamageCauser, EventInstigat
         GameplayUtils.Print("UGCPlayerState。OnMobPawnTakeDamage： ",Damage)
         local dmgPosition = UGCAttributeSystem.GetDamagePositionTypeFromContext(DamageContext)
         local isDead = UGCAttributeSystem.GetGameAttributeValue(MobPawn,"Health") <= 0
-        local score = GameplaySystem.PlayerSystem:CalcuZombieDamageScore(MobPawn,Damage,DamageContext)
+        local playerKey = UGCGameSystem.GetPlayerKeyByPlayerState(self)
+        local score = GameplaySystem.PlayerSystem:CalcuZombieDamageScore(playerKey,MobPawn,Damage,DamageContext)
         local statComponent = self:GetInGameStatDataComponent()
         statComponent:AddStatData(EPlayerInGameStatKeys.TotalDamage,Damage)
-        statComponent:AddStatData(EPlayerInGameStatKeys.TotalScore,score)
+        statComponent:AddScore(score)
         --通知客户端玩家得分
         GameplaySystem.PlayerRPC:S2C_OnGainScore(EventInstigator,score,dmgPosition)
         --
@@ -620,6 +620,11 @@ end
 ---@return BP_PlayerInGameStatDataComponent_C
 function UGCPlayerState:GetInGameStatDataComponent()
     return self.PlayerInGameStatDataComponent
+end
+
+---@public
+function UGCPlayerState:GetAliveState()
+    return self.AliveState
 end
 
 return UGCPlayerState

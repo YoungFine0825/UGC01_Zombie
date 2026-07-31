@@ -102,12 +102,6 @@ function BP_UGCBackpack:InitEventAfterPlayerEnter()
     end
 end
 
----获取主武器槽位名称
----@return table @槽位名称列表
-function BP_UGCBackpack:GetMainWeaponSlots()
-    return {"EquipmentSlot.Core.MainSlot1", "EquipmentSlot.Core.MainSlot2"};
-end
-
 ---重生后处理事宜
 function BP_UGCBackpack:OnPawnRespawn()
     ugcprint("[BP_UGCBackpack:OnPawnRespawn] Enter");
@@ -136,7 +130,8 @@ function BP_UGCBackpack:OnPawnRespawn()
     local EquipSlots = self:GetEquipSlots();
     for _, EquipSlot in pairs(EquipSlots) do
         -- 主武器手持时才生效
-        if self:TableContains(EquipSlot, self:GetMainWeaponSlots()) and self:IsMainWeaponHandType() then
+        local mainWeaponSlots = GameplaySystem.WeaponSystem:GetMainWeaponSlots()
+        if self:TableContains(EquipSlot, mainWeaponSlots) and self:IsMainWeaponHandType() then
             ugcprint(string.format("[BP_UGCBackpack:OnPawnRespawn] EquipSlot [%s]", EquipSlot));
         else
             local EquipItem = self:GetEquippedItemBySlotName(EquipSlot);
@@ -297,9 +292,9 @@ end
 ---@param DefineID FItemDefineID @物品实例ID
 function BP_UGCBackpack:OnEquipItem(SlotName, DefineID)
     ugcprint(string.format("[BP_UGCBackpack:OnEquipItem] %s", ExportText(totable(DefineID))));
-
+    local mainWeaponSlots = GameplaySystem.WeaponSystem:GetMainWeaponSlots()
     -- 主武器手持时才生效
-    if self:TableContains(SlotName, self:GetMainWeaponSlots()) and self:IsMainWeaponHandType() then
+    if self:TableContains(SlotName, mainWeaponSlots) and self:IsMainWeaponHandType() then
         ugcprint(string.format("[BP_UGCBackpack:OnEquipItem] Equip MainSlot [%s]", SlotName));
         return;
     end
@@ -365,12 +360,9 @@ function BP_UGCBackpack:EnsureDefaultWeapons(bNeedEquip)
         return false
     end
     local playerKey = UGCGameSystem.GetPlayerKeyByPlayerController(self.OwnerController)
-    local weaponCfgId = GameplaySystem.WeaponSystem:GetDefaultWeaponID(playerKey)
-    local delivered = GameplaySystem.WeaponSystem:DeliverWeaponToPlayer(pc,weaponCfgId)
-
-    if bNeedEquip then
-        local slotName = "EquipmentSlot.Core.MainSlot1"
-         GameplaySystem.WeaponSystem:EquipGainedWeapon(pc,weaponCfgId,slotName)
+    local defaultWeapons = GameplaySystem.WeaponSystem:GetDefaultWeaponIDList(playerKey)
+    for k,v in pairs(defaultWeapons) do
+        GameplaySystem.WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,v,false)
     end
 end
 

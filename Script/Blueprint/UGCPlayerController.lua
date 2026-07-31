@@ -1,4 +1,5 @@
 ---@class UGCPlayerController_C:BP_UGCPlayerController_C
+---@field SodaSystemComponent BP_PlayerSodaSystemComponent_C
 ---@field WeaponSystemComponent BP_PlayerControllerWeaponSystemComponent_C
 ---@field PlayerInteractEntityComponent BP_PlayerInteractEntityComponent_C
 ---@field ClientGameplayComponent BP_ClientGameplayComponent_C
@@ -243,33 +244,10 @@ function UGCPlayerController:RPC_Server_SetLobbyReadyStatus(bIsReady)
     UGCGameSystem.GetPlayerStateByPlayerController(self):SetLobbyReadyStatus(bIsReady)
 end
 
+---@private
 function UGCPlayerController:RPC_Server_RespawnPlayer()
-
-    local pawn = UGCGameSystem.GetPlayerPawnByPlayerController(self)
-        --判断是倒地还是死亡
-    local DyingTag = UGCGameplayTagSystem.RequestGameplayTag("PawnState.Dying")
-
-    if pawn and UGCPersistEffectSystem.HasDynamicState(pawn, DyingTag) then
-        ugcprint("[UGCPlayerController:RPC_Server_RespawnPlayer]")
-        UGCPlayerPawnSystem.ConfirmRescueOtherImmediately(pawn, pawn)
-        UGCPawnAttrSystem.SetHealth(pawn, UGCPawnAttrSystem.GetHealthMax(pawn))
-    else
-        local PlayerKey = UGCGameSystem.GetPlayerKeyByPlayerController(self)
-        ugcprint("UGCPlayerController:RPC_Server_RespawnPlayer")
-        UGCGameSystem.RespawnPlayer(PlayerKey)
-
-        local PlayerState = UGCGameSystem.GetPlayerStateByPlayerController(self)
-
-        if not PlayerState then
-            print("[UGCPlayerController:RPC_Server_RespawnPlayer]:PlayerState is nil")
-            return
-        end
-
-        PlayerState.AliveState = UGCGameData.AliveState.Alive
-        UnrealNetwork.RepLazyProperty(PlayerState, "AliveState")
-
-        GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Server.OnPlayerAliveStateChanged,self,PlayerState.AliveState)
-    end
+    local PlayerKey = UGCGameSystem.GetPlayerKeyByPlayerController(self)
+    GameplaySystem.PlayerSystem:ServerRespawnPlayer(PlayerKey)
 end
 
 function UGCPlayerController:RPC_Client_GameSettle(IsFinish)

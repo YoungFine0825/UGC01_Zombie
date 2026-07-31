@@ -212,6 +212,31 @@ function Cls:HandleInteractRequest(request)
 end
 
 ---@private
+---@param entityInstanceID
+---@param behavioursList BP_InteractEntityBehaviourComponent_C[]
+---@param skipBehaviours FGameplayTag[]
+function Cls:_HandleSkippedBehaviours(entityInstanceID,behavioursList,skipBehaviours)
+    if type(skipBehaviours) == "table" and #skipBehaviours > 0 then
+        local filteredBehaviours = {}
+        local skipBehavioursMap = {}
+        for k,v in pairs(skipBehaviours) do
+            skipBehavioursMap[v.TagName] = true
+        end
+        for i = 1,#behavioursList do
+            if skipBehavioursMap[behavioursList[i].BehaviourTag.TagName]
+            then
+                GameplayUtils.Print("InteractEntitySystem._HandleSkippedBehaviours: 交互实体",entityInstanceID,"将跳过行为 ",behavioursList[i].BehaviourTag.TagName)
+            else
+                table.insert(filteredBehaviours,behavioursList[i])
+            end
+        end
+        return filteredBehaviours
+    else
+        return behavioursList
+    end
+end
+
+---@private
 ---@param request Gameplay.InteractEntitySystem.InteractionRequest
 function Cls:_ProcessInteractRequest(request)
     local playerKey = request.PlayerKey
@@ -238,22 +263,7 @@ function Cls:_ProcessInteractRequest(request)
         return
     end
     --过滤需要跳过的行为
-    if request.skipBehaviours and #request.skipBehaviours > 0 then
-        local filteredBehaviours = {}
-        local skipBehavioursMap = {}
-        for k,v in pairs(request.skipBehaviours) do
-            skipBehavioursMap[v.TagName] = true
-        end
-        for i = 1,#behaviours do
-            if skipBehavioursMap[behaviours[i].BehaviourTag.TagName]
-            then
-                GameplayUtils.Print("InteractEntitySystem._ProcessInteractRequest: 交互实体",entityInstanceID,"将跳过行为 ",behaviours[i].BehaviourTag.TagName)
-            else
-                table.insert(filteredBehaviours,behaviours[i])
-            end
-        end
-        behaviours = filteredBehaviours
-    end
+    behaviours = self:_HandleSkippedBehaviours(entityInstanceID,behaviours,request.skipBehaviours)
     --
     if self.m_isServer and not request.IgnoreConditionChecking then
         --只有服务端需要检查行为的条件是否满足
@@ -342,7 +352,37 @@ function Cls:ClientHandleInteractRequest(request)
         return
     end
 
-    self:HandleInteractRequest(request)
+    local playerKey = request.PlayerKey
+    local entityInstanceID = request.EntityInstanceID
+    --客户端无法通过GetInteractComponentByInstanceID获取到组件，所以将通过具名参数传进来
+    local entityInteractComp = request.EntityInteractComp or self:GetInteractComponentByInstanceID(entityInstanceID)
+    local cbObj = request.CallbackObj
+    local cbFunc = request.CallbackFunc
+    --获取行为合集
+    ---@type BP_InteractEntityBehaviourComponent_C[]
+    local behaviours = entityInteractComp:GetBehaviours()
+    if #behaviours <= 0 then
+        cbFunc(cbObj, playerKey, entityInstanceID, EInteractEntityErrCode.None, "未定义任何行为")
+        return
+    end
+    --过滤需要跳过的行为
+    behaviours = self:_HandleSkippedBehaviours(entityInstanceID,behaviours,request.skipBehaviours)
+    --按照执行顺序排序
+    table.sort(behaviours,function(a,b) return a.ExecutionOrder < b.ExecutionOrder end)
+    ---@type Gameplay.InteractEntitySystem.BehaviourExecutionTask
+    local task = {
+        orderedBehaviours = behaviours,
+        interactComponent = entityInteractComp,
+        playerKey = playerKey,
+        instanceID = entityInstanceID,
+        callbackObj = cbObj,
+        callbackFunc = cbFunc,
+        waitingTaskIndex = 0,
+        waitingStartTime = 0,
+        executingStage = EBehaviourExecutionTaskStage.PreExecute
+    }
+    GameplayUtils.Print("InteractEntitySystem.ClientHandleInteractRequest: 为交互实体",entityInstanceID,"创建执行行为任务 ",#behaviours)
+    table.insert(self.m_executionTasks,task)
 end
 
 ---@private

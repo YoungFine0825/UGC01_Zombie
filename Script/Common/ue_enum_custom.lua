@@ -42,6 +42,7 @@ Enum_MainWeaponAffixType = {
 EInteractBehaviourGrantType = { 
     Weapon = 0,
     Buff = 1,
+    Score = 2,
 }; 
 
 

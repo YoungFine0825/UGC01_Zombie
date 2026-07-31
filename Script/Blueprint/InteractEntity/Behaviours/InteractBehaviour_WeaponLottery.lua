@@ -6,6 +6,8 @@
 ---@field DrawnWeaponDisappearTime float
 ---@field PlayerKey int32
 ---@field DrawnWeaponConfigID int32
+---@field AudioDrawing UAkAudioEvent
+---@field AudioReceive UAkAudioEvent
 --Edit Below--
 local BPExtent = UGCGameSystem.UGCRequire("Script.Gameplay.BPExtend")
 ---@type InteractBehaviour_WeaponLottery_C
@@ -59,10 +61,13 @@ function InteractBehaviour_WeaponLottery:GetReplicatedProperties()
     return {"m_curState","Lazy"}
 end
 
-function InteractBehaviour_WeaponLottery:GetAvailableServerRPCs()
-    return
-end
+--function InteractBehaviour_WeaponLottery:GetAvailableServerRPCs()
+--    return
+--end
 
+function InteractBehaviour_WeaponLottery:GetAvailableClientRPCs()
+    return "RPC_Client_OnPlayerReceiveWeapon"
+end
 
 ---@protected 服务端通知当前发起抽奖的玩家
 function InteractBehaviour_WeaponLottery:OnRep_PlayerKey()
@@ -91,7 +96,9 @@ function InteractBehaviour_WeaponLottery:CanInteract(playerKey)
             return false,EInteractEntityErrCode.FailUnavailable--不是发起抽奖的玩家，不允许交互
         end
     elseif self.m_curState == ELotteryState.Drawing then--正在抽奖中不允许任何人交互
-        return false,EInteractEntityErrCode.FailUnavailable
+        if playerKey ~= self.PlayerKey then
+            return false,EInteractEntityErrCode.FailUnavailable--不是发起抽奖的玩家，不允许交互
+        end
     end
     return true,EInteractEntityErrCode.None
 end
@@ -109,10 +116,8 @@ function InteractBehaviour_WeaponLottery:CanExecute(playerKey)
         if UGCGameSystem.GetServerTimeSec() < (self.m_latestDrawingTime + self.IntervalTime) then
             return false,EInteractEntityErrCode.FailInCooldown
         end
-        local playerPawn = UGCGameSystem.GetPlayerPawnByPlayerKey(playerKey)
-        local playerPropertyName = EPlayerInGameStatKeys.TotalScore
-        local propertyValue = UGCAttributeSystem.GetGameAttributeValue(playerPawn,playerPropertyName)
-        if propertyValue < self.Price then
+        local curSocre = GameplaySystem.PlayerSystem:GetPlayerCurrentScore(playerKey)
+        if curSocre < self.Price then
             return false,EInteractEntityErrCode.FailUnavailable--得分不够
         end
     elseif self.m_curState == ELotteryState.Drawing then
@@ -139,7 +144,11 @@ end
 function InteractBehaviour_WeaponLottery:StartLottery(playerKey)
     if self.m_isServer then
         self.PlayerKey = playerKey
+        --消耗玩家积分
+        GameplaySystem.PlayerSystem:ConsumePlayerScore(playerKey,self.Price)
+        --抽取武器
         self:ServerDoWeaponLotteryDraw()
+        --进入抽奖动画
         self:ServerChangeState(ELotteryState.Drawing)
         UGCTimerUtility.CreateLuaTimer(self.DrawingTime,function()
             self:ShowLotteryResult()
@@ -192,7 +201,17 @@ function InteractBehaviour_WeaponLottery:ServerDeliverWeaponToPlayer(playerKey)
     if self.m_isClient then
         return
     end
-    GameplaySystem.WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,self.DrawnWeaponConfigID)
+    GameplaySystem.WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,self.DrawnWeaponConfigID,true)
+    local playerController = UGCGameSystem.GetPlayerControllerByPlayerKey(playerKey)
+    UnrealNetwork.CallUnrealRPC(playerController,self,"RPC_Client_OnPlayerReceiveWeapon",playerKey,self.DrawnWeaponConfigID)
+end
+
+---@protected
+function InteractBehaviour_WeaponLottery:RPC_Client_OnPlayerReceiveWeapon(playerKey,weaponConfigID)
+    if playerKey ~= UGCGameSystem.GetLocalPlayerKey() then
+        return
+    end
+    UGCSoundManagerSystem.PlaySound2D(self.AudioReceive)
 end
 
 ---@protected
@@ -217,6 +236,11 @@ function InteractBehaviour_WeaponLottery:OnRep_m_curState()
         self:ClientPlayDrawingAnim()
         --
         pc.PlayerInteractEntityComponent:ClientShowInteractionUIWidget(false)
+        --播放抽奖音效
+        if self.m_drawingSoundID then
+            UGCSoundManagerSystem.StopSoundByID(self.m_drawingSoundID)
+        end
+        self.m_drawingSoundID = UGCSoundManagerSystem.PlaySound2D(self.AudioDrawing)
     elseif curState == ELotteryState.ShowingWeapon then
         local weaponName = GameplaySystem.WeaponConfigMgr:GetWeaponName(self.DrawnWeaponConfigID)
         self.m_interactEntityComp:ClientOverrideHUDTipsText(string.format("领取%s",weaponName))
@@ -225,6 +249,11 @@ function InteractBehaviour_WeaponLottery:OnRep_m_curState()
         self:ClientPlayWeaponDisappearAnim()
         --
         pc.PlayerInteractEntityComponent:ClientUpdateInteractionUIWidget()
+        --停止音效
+        if self.m_drawingSoundID then
+            UGCSoundManagerSystem.StopSoundByID(self.m_drawingSoundID)
+            self.m_drawingSoundID = nil
+        end
     end
 
 end

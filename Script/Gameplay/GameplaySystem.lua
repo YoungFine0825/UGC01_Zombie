@@ -21,6 +21,8 @@ GameplaySystem = {
     WeaponSystem = UGCRequire("Script.Gameplay.Weapon.WeaponSystem").New(),
     ---@type Gameplay.WeaponConfigMgr
     WeaponConfigMgr = UGCRequire("Script.Gameplay.Weapon.WeaponConfigMgr").New(),
+    ---@type Gameplay.SodaConfigMgr
+    SodaConfigMgr = UGCRequire("Script.Gameplay.Player.SodaConfigMgr").New(),
     ---@type Gameplay.BackpackSystem
     BackpackSystem = UGCRequire("Script.Gameplay.Backpack.BackpackSystem").New(),
     ---@type Gameplay.PlayerSystem
@@ -35,6 +37,8 @@ GameplaySystem = {
     MonsterAISystem = UGCRequire("Script.Gameplay.Monster.MonsterAISystem").New(),
     ---@type Gameplay.ZombieSpawnSystem
     ZombieSpawnSystem = UGCRequire("Script.Gameplay.Monster.ZombieSpawnSystem").New(),
+    ---@type Gameplay.NavigationSystem
+    NavigationSystem = UGCRequire("Script.Gameplay.Navigation.NavigationSystem").New(),
 }
 
 
@@ -76,4 +80,19 @@ end
 ---@return boolean
 function GameplaySystem.BackToLobby()
     return UGCMultiMode.RequestMatch(1001, nil, nil)
+end
+
+---@return UGCPlayerController_C
+function GameplaySystem.GetPlayerControllerByPlayerKey(playerKey)
+    return UGCGameSystem.GetPlayerControllerByPlayerKey(playerKey)
+end
+
+---@return UGCPlayerState_C
+function GameplaySystem.GetPlayerStateByPlayerKey(playerKey)
+    return UGCGameSystem.GetPlayerStateByPlayerKey(playerKey)
+end
+
+---@return UGCPlayerPawn_C
+function GameplaySystem.GetPlayerPawnByPlayerKey(playerKey)
+    return UGCGameSystem.GetPlayerPawnByPlayerKey(playerKey)
 end

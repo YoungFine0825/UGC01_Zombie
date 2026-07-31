@@ -22,7 +22,7 @@ local UGC_GameKillData_Item_UIBP = {
 }
 
 ---@class UGC_GameKilldata_Item_UIBP_C.ScoreFloatTip
----@field weight UGC_ScoreFloat_Item_UIBP_C
+---@field widget UGC_ScoreFloat_Item_UIBP_C
 ---@field duration number
 ---@field playedTime number
 
@@ -39,10 +39,10 @@ end
 function UGC_GameKillData_Item_UIBP:Destruct()
 	self.ScoreFloatUIClass = nil
 	for k,v in pairs(self.m_freeScoreFloatTips) do
-		v.weight = nil
+		v.widget = nil
 	end
 	for k,v in pairs(self.m_playingScoreFloatTips) do
-		v.weight = nil
+		v.widget = nil
 	end
 	self.m_freeScoreFloatTips = {}
 	self.m_playingScoreFloatTips = {}
@@ -56,9 +56,9 @@ function UGC_GameKillData_Item_UIBP:Tick(MyGeometry, InDeltaTime)
 			local tip = self.m_playingScoreFloatTips[i]
 			tip.playedTime = tip.playedTime + InDeltaTime
 			if tip.playedTime >= tip.duration then
-				if tip.weight then
-					tip.weight:RemoveFromParent()
-					tip.weight:SetVisibility(ESlateVisibility.Collapsed)
+				if tip.widget then
+					tip.widget:RemoveFromParent()
+					tip.widget:SetVisibility(ESlateVisibility.Collapsed)
 				end
 				tip.content = nil
 				tip.color = nil
@@ -66,6 +66,11 @@ function UGC_GameKillData_Item_UIBP:Tick(MyGeometry, InDeltaTime)
 				table.insert(self.m_freeScoreFloatTips,tip)
 			end
 		end
+	end
+	local PS = UGCGameSystem.GetLocalPlayerState()
+	if PS then
+		self:UpdateGameKill(PS)
+		return
 	end
 end
 
@@ -82,19 +87,19 @@ function UGC_GameKillData_Item_UIBP:LuaInit()
 	self.Button_Select.OnClicked:Add(self.Button_Select_OnClicked, self);
 	-- [Editor Generated Lua] BindingEvent End;
 
-	PromiseFuture.New():Set(
-        function (PromiseFuture)
-            while true do
-                local PS = UGCGameSystem.GetLocalPlayerState()
-                if PS then
-                    PS.PlayerGameGameRecordDataDelegate:Add(self.UpdateGameKill, self)
-					self:UpdateGameKill(PS)
-                    return
-                end
-                PromiseFuture:Yield()
-            end
-        end
-    ):AutoResume(self, 0.2, 5)
+	--PromiseFuture.New():Set(
+    --    function (PromiseFuture)
+    --        while true do
+    --            local PS = UGCGameSystem.GetLocalPlayerState()
+    --            if PS then
+    --                PS.PlayerGameGameRecordDataDelegate:Add(self.UpdateGameKill, self)
+	--				self:UpdateGameKill(PS)
+    --                return
+    --            end
+    --            PromiseFuture:Yield()
+    --        end
+    --    end
+    --):AutoResume(self, 0.2, 5)
 
 	GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnGameStateChanged,self,self.OnGameStateChanged)
 	GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnRoundFlowChanged,self,self.OnRoundFlowChanged)
@@ -172,7 +177,7 @@ function UGC_GameKillData_Item_UIBP:UpdateGameKill(UGCPlayerState)
 	local playerStat = UGCPlayerState:GetInGameStatDataComponent()
 	self.TotalKill = playerStat:GetStatData(EPlayerInGameStatKeys.TotalKill)
 	self.CurLevel = 1
-	self.TotalScore = playerStat:GetStatData(EPlayerInGameStatKeys.TotalScore)
+	self.TotalScore = playerStat:GetCurScore()
 	self.TextBlock_BossValue:SetText(tostring(self.TotalScore))
 end
 
@@ -227,7 +232,10 @@ end
 
 ---@private
 function UGC_GameKillData_Item_UIBP:OnLocalPlayerGainScore(score,isHeadshot)
-	if not self.ScoreFloatUIClass then return end
+	if not self.ScoreFloatUIClass then
+		GameplayUtils.Exception("UGC_GameKillData_Item_UIBP.OnLocalPlayerGainScore: ScoreFloatUIClass is nil")
+		return
+	end
 	local pc = UGCGameSystem.GetLocalPlayerController()
 	---@type UGC_GameKilldata_Item_UIBP_C.ScoreFloatTip
 	local scoreTip = nil
@@ -237,16 +245,18 @@ function UGC_GameKillData_Item_UIBP:OnLocalPlayerGainScore(score,isHeadshot)
 	else
 		local newItem = UserWidget.NewWidgetObjectBP(pc, self.ScoreFloatUIClass)
 		scoreTip = {
-			weight = newItem,
+			widget = newItem,
 			playedTime = 0,
 			duration = 0,
 		}
 	end
-	if scoreTip.weight == nil then
+	if scoreTip.widget == nil then
+		GameplayUtils.Exception("UGC_GameKillData_Item_UIBP.OnLocalPlayerGainScore: UserWidget.NewWidgetObjectBP failed! ")
 		return
 	end
+	GameplayUtils.Print("UGC_GameKillData_Item_UIBP.OnLocalPlayerGainScore: Gain score ",score)
 	---@type UGC_ScoreFloat_Item_UIBP_C
-	local tipWeight = scoreTip.weight
+	local tipWeight = scoreTip.widget
 	-- 挂到容器，落点在锚点附近 + 随机偏移，避免连发重叠
 	local slot = self.Canvas_ScoreFloat:AddChildToCanvas(tipWeight)
 	if slot then
@@ -261,9 +271,9 @@ function UGC_GameKillData_Item_UIBP:OnLocalPlayerGainScore(score,isHeadshot)
 	-- 文本与配色（爆头给个醒目色）
 	tipWeight.Text_Score:SetText("+" .. tostring(score))
 	if isHeadshot then
-		tipWeight.Text_Score:SetColorAndOpacity(LinearColor.New(1.0, 0.85, 0.2, 1.0)) -- 金色
+		tipWeight.Text_Score:SetColorAndOpacity({ SpecifiedColor = { R = 0.1, G = 0.85, B = 0.2, A = 1.0 }, ColorUseRule = 0 }) -- 金色
 	else
-		tipWeight.Text_Score:SetColorAndOpacity(LinearColor.New(1.0, 1.0, 1.0, 1.0))
+		tipWeight.Text_Score:SetColorAndOpacity({ SpecifiedColor = { R = 1.0, G = 1.0, B = 1.0, A = 1.0 }, ColorUseRule = 0 })
 	end
 
 	-- 播动画，结束后销毁（用时长定时器，简单稳健）
