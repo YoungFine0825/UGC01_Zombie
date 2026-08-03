@@ -18,10 +18,10 @@ function BTCondition_Zombie_RequestEntryPosition:PerformConditionCheckAI(OwnerCo
         local blackboard = GameplaySystem.MonsterAISystem:GetBlackboard(OwnerController)
         blackboard:SetValueAsInt("EntryPosSlotIndex",posSlotIndex)
         blackboard:SetValueAsVector("EntryPosition",worldPos)
-        GameplayUtils.Print("BTCondition_Zombie_RequestEntryPosition.PerformConditionCheckAI: 请求入口站位成功！位置索引=",posSlotIndex)
+        --GameplayUtils.Print("BTCondition_Zombie_RequestEntryPosition.PerformConditionCheckAI: 请求入口站位成功！位置索引=",posSlotIndex)
         return true
     else
-        GameplayUtils.Print("BTCondition_Zombie_RequestEntryPosition.PerformConditionCheckAI: 请求入口站位失败！")
+        --GameplayUtils.Print("BTCondition_Zombie_RequestEntryPosition.PerformConditionCheckAI: 请求入口站位失败！")
     end  
 
     return false

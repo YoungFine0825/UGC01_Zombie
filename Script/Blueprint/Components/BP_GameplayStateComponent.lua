@@ -62,4 +62,16 @@ function BP_GameplayStateComponent:OnRep_RoundFlowInfo()
     GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Client.OnRoundFlowChanged)
 end
 
+---@public
+---@return number
+function BP_GameplayStateComponent:GetCurRound()
+    return self.RoundFlowInfo.CurRoundNum
+end
+
+---@public
+---@return number ERoundPhase
+function BP_GameplayStateComponent:GetCurRoundPhase()
+    return self.RoundFlowInfo.RoundPhase
+end
+
 return BP_GameplayStateComponent

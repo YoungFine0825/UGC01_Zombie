@@ -32,6 +32,7 @@ function UGC_InteractMain_UIBP:LuaInit()
     ---@type BP_PlayerInteractEntityComponent_C
     local playerInteractEntityComponent = playerController.PlayerInteractEntityComponent
     self:ShowEntityInteractUI(playerInteractEntityComponent:ClientGetCurFocusedEntityID())
+    UGCWidgetManagerSystem.HideWidget(self)
 end
 
 function UGC_InteractMain_UIBP:Destruct()

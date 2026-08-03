@@ -1,4 +1,5 @@
 ---@class BP_Interact_LevelObstacle_C:BP_InteractableBase_C
+---@field InteractBehaviour_ActivateZombieSpawners InteractBehaviour_ActivateZombieSpawners_C
 ---@field InteractBehaviour_LinkUnlockObstacle InteractBehaviour_LinkUnlockObstacle_C
 ---@field InteractBehaviour_ActivateZombieEntries InteractBehaviour_ActivateZombieEntries_C
 ---@field DynamicObstacleAvoidance UDynamicObstacleAvoidanceComponent

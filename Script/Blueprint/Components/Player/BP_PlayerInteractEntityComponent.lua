@@ -69,8 +69,6 @@ function BP_PlayerInteractEntityComponent:OnPlayerEnterInteractEntity(playerCont
         GameplayUtils.Exception("[InteractEntity] OnPlayerEnterInteractEntity return: playerController不是自身, instanceID=",tostring(interactEntityInstanceID))
         return
     end
-
-
     if self.m_enteredInteractEntities[interactEntityInstanceID] then
         GameplayUtils.Exception("[InteractEntity] OnPlayerEnterInteractEntity return: 实体已在列表内, instanceID=",tostring(interactEntityInstanceID))
         return
@@ -137,8 +135,10 @@ end
 
 ---@private
 function BP_PlayerInteractEntityComponent:OnLocalPlayerAliveStateChanged(newState)
+    local prePlayerState = self.m_cachedPlayerState or EPlayerAliveState.None
+    self.m_cachedPlayerState = newState
     local playerController = self.m_owner
-    if newState == EPlayerAliveState.Alive then
+    if (prePlayerState ~= EPlayerAliveState.None and prePlayerState ~= EPlayerAliveState.Alive) and newState == EPlayerAliveState.Alive then
         --复活后尝试恢复客户端交互界面
         self:ClientUpdateInteractionUIWidget()
     elseif newState == EPlayerAliveState.Dying or newState == EPlayerAliveState.Dead then
@@ -401,10 +401,9 @@ function BP_PlayerInteractEntityComponent:ClientUpdateInteractionUIWidget()
     end
     if self:GetInteractionUIWidget() == nil then
         self:CreateInteractionUIWidget()
-    else
-        --
-        self:ClientShowInteractionUIWidget(self.m_curFocusedEntityID > 0)
     end
+    --
+    self:ClientShowInteractionUIWidget(self.m_curFocusedEntityID > 0)
     --通知UI更新实体按钮
     GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Client.OnLocalPlayerUpdateInteractEntityWidget,self.m_curFocusedEntityID,self)
 end
@@ -420,22 +419,29 @@ end
 
 ---@private
 function BP_PlayerInteractEntityComponent:CreateInteractionUIWidget(callback)
-    local WidgetPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/InteractEntity/UGC_InteractMain_UIBP.UGC_InteractMain_UIBP_C')
-    UGCWidgetManagerSystem.CreateWidgetAsync(WidgetPath, function(Widget)
-        local UISlotName = 'UI.UISlot.MainUISlot_High'
-        local ZOrder = 0
-        local AnchorData = UGCObjectUtility.NewStruct("AnchorData")
-        local Anchors = UGCObjectUtility.NewStruct("Anchors")
-        Anchors.Maximum = Vector2D.New(1.0, 1.0)
-        Anchors.Minimum = Vector2D.New(0, 0)
-        AnchorData.Anchors = Anchors
-        UGCWidgetManagerSystem.AddToSlot(Widget,UISlotName, ZOrder, AnchorData)
-        UGCWidgetManagerSystem.ShowWidget(Widget)
-        self.m_interactUIWeakptr = UGCObjectUtility.MakeWeakObjectPtr(Widget)
+    --UGC_InteractMain_UIBP已预先挂载到UGCMainUI，通过接口获取
+    local MainUIPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/UGCMainUI.UGCMainUI_C')
+    local interactionWidget = UGCWidgetManagerSystem.GetUserWidgetByWidgetLayout(MainUIPath,"UGC_InteractMain_UIBP")
+    if interactionWidget then
+        UGCWidgetManagerSystem.ShowWidget(interactionWidget)
+        self.m_interactUIWeakptr = UGCObjectUtility.MakeWeakObjectPtr(interactionWidget)
         if callback then
             callback()
         end
-    end)
+    else
+        GameplayUtils.Exception("BP_PlayerInteractEntityComponent.CreateInteractionUIWidget: UGCMainUI上未挂载UGC_InteractMain_UIBP")
+    end
+    --以下方法打开交互界面，不知为何会阻挡除了UGC_InteractMain_UIBP自身其他所有UI的点击事件
+    --local WidgetPath = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/InteractEntity/UGC_InteractMain_UIBP.UGC_InteractMain_UIBP_C')
+    --UGCWidgetManagerSystem.CreateWidgetAsync(WidgetPath, function(Widget)
+    --    local UISlotName = 'UI.UISlot.MainUISlot_Low'
+    --    UGCWidgetManagerSystem.AddToSlot(Widget,UISlotName)
+    --    UGCWidgetManagerSystem.ShowWidget(Widget)
+    --    self.m_interactUIWeakptr = UGCObjectUtility.MakeWeakObjectPtr(Widget)
+    --    if callback then
+    --        callback()
+    --    end
+    --end)
 end
 
 ---@private
@@ -447,9 +453,11 @@ function BP_PlayerInteractEntityComponent:DestroyInteractionUIWidget()
         self.m_interactUIWeakptr = nil
         return
     end
-    ---@type UUserWidget
-    local widget = UGCObjectUtility.GetObjectFromWeakObjectPtr(self.m_interactUIWeakptr)
-    UGCWidgetManagerSystem.RemoveFromSlot(widget)
+    --UGC_InteractMain_UIBP已预先挂载到UGCMainUI，直接置空
+    self.m_interactUIWeakptr = nil
+    -----@type UUserWidget
+    --local widget = UGCObjectUtility.GetObjectFromWeakObjectPtr(self.m_interactUIWeakptr)
+    --UGCWidgetManagerSystem.RemoveFromSlot(widget)
 end
 
 ---@public

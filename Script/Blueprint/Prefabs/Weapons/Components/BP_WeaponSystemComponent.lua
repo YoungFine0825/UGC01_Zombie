@@ -42,6 +42,7 @@ function BP_WeaponSystemComponent:ResetBulletDefineID()
     self.m_ammoItemId = ammoItemId
     local bulletDefineID = GameplaySystem.BackpackSystem:GetGainedItemDefineId(self.m_weaponOwner,ammoItemId)
     self.m_weaponActor.ShootWeaponEntity.BulletType = bulletDefineID
+    GameplayUtils.Print("BP_WeaponSystemComponent.ResetBulletDefineID: 枪械 ",self.WeaponConfigID," 使用弹药 ",self.m_ammoItemId)
     UGCTimerUtility.CreateLuaTimer(0.5,function()
         if UE.IsValid(self) and UE.IsValid(self.m_weaponActor) and UE.IsValid(self.m_weaponOwner) then
             local bulletDefineID = GameplaySystem.BackpackSystem:GetGainedItemDefineId(self.m_weaponOwner,self.m_ammoItemId)

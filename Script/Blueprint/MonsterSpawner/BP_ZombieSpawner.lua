@@ -1,6 +1,7 @@
 ---@class BP_ZombieSpawner_C:BP_UGCMobSpawner_C
 ---@field bIsOutside bool
 ---@field Entry ULuaArrayHelper<BP_EntryForZombie_Base_C>
+---@field bDefaultActive bool
 --Edit Below--
 
 ---@type BP_ZombieSpawner_C
@@ -17,6 +18,8 @@ local BP_ZombieSpawner = {
 function BP_ZombieSpawner:ReceiveBeginPlay()
     BP_ZombieSpawner.SuperClass.ReceiveBeginPlay(self)
     --
+    self.m_isActived = self.bDefaultActive
+    --
     if UGCGameSystem.IsServer() then
         self:OnBeginPlay()
     end
@@ -30,6 +33,31 @@ function BP_ZombieSpawner:ReceiveEndPlay()
     end
 end
 
+
+function BP_ZombieSpawner:GetReplicatedProperties()
+    return {"m_isActived","Lazy"}
+end
+
+---@public
+---@return boolean
+function BP_ZombieSpawner:IsActive()
+    return self.m_isActived
+end
+
+---@private
+function BP_ZombieSpawner:OnRep_m_isActived()
+    GameplayUtils.Print("BP_ZombieSpawner.OnRep_m_isActived: 丧尸入口 ",UGCObjectUtility.GetObjectName(self)," 激活！")
+end
+
+---@public 激活入口
+function BP_ZombieSpawner:ServerActivate()
+    if not UGCGameSystem.IsServer() then
+        return
+    end
+    self.m_isActived = true
+    UnrealNetwork.RepLazyProperty(self,"m_isActived")
+    GameplayUtils.Print("BP_ZombieSpawner.ServerActivate: 丧尸入口 ",UGCObjectUtility.GetObjectName(self)," 激活！")
+end
 
 --[[
 function BP_ZombieSpawner:OnMobSpawn(MobPawn)
@@ -95,6 +123,9 @@ end
 ---@public
 ---@return boolean
 function BP_ZombieSpawner:CanSpawnZombie()
+    if not self.m_isActived then
+        return false
+    end
     local curTime = UGCGameSystem.GetServerTimeSec()
     if math.max(0,curTime - self.m_lastSpawnTime) < 1 then
         return false

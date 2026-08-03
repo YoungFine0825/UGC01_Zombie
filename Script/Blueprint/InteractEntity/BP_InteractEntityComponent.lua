@@ -57,12 +57,28 @@ function BP_InteractEntityComponent:ReceiveBeginPlay()
     GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnLocalPlayerReceiveInteractionResult, self, self.OnLocalPlayerReceiveInteractionResult)
 end
 
+---@return BP_InteractableBase_C
+function BP_InteractEntityComponent:GetOwnerActor()
+    if self.m_owner == nil then
+        self.m_owner = UGCActorComponentUtility.GetOwner(self)
+    end
+    return self.m_owner
+end
 
---[[
 function BP_InteractEntityComponent:ReceiveTick(DeltaTime)
     BP_InteractEntityComponent.SuperClass.ReceiveTick(self, DeltaTime)
+    --if not UGCGameSystem.IsServer()then
+    --    local ownerLoc = self:GetOwnerActor():K2_GetActorLocation()
+    --    ownerLoc.Z = ownerLoc.Z + 320
+    --    UGCDebugSystem.DrawDebugString(
+    --        ownerLoc,
+    --        "ID: " .. tostring(self.m_instanceID),
+    --        nil,
+    --        {A = 1, B = 0, G = 1, R = 1},
+    --        0
+    --    )
+    --end
 end
---]]
 
 --[[--]]
 function BP_InteractEntityComponent:ReceiveEndPlay()
@@ -85,10 +101,11 @@ end
 ---@protected
 function BP_InteractEntityComponent:OnBeginPlayOnServer()
     --服务端向系统注册自身并获取唯一ID
-    local instanceID = GameplaySystem.InteractEntitySystem:ServerRegisterEntity(self.m_owner,self)
+    local owner = self:GetOwnerActor()
+    local instanceID = GameplaySystem.InteractEntitySystem:ServerRegisterEntity(owner,self)
     self.m_instanceID = instanceID
     UnrealNetwork.RepLazyProperty(self,"m_instanceID")
-    GameplayUtils.Print("BP_InteractEntityComponent.OnBeginPlayOnServer: 可交互实体 ",UGCObjectUtility.GetObjectName(self.m_owner)," 获得实例ID ",instanceID)
+    GameplayUtils.Print("BP_InteractEntityComponent.OnBeginPlayOnServer: 可交互实体 ",UGCObjectUtility.GetObjectName(owner)," 获得实例ID ",instanceID)
 end
 
 ---@protected
@@ -136,8 +153,10 @@ end
 ---@protected
 function BP_InteractEntityComponent:OnRep_m_instanceID()
     --客户端像交互系统注册自身
-    GameplaySystem.InteractEntitySystem:ClientRegisterEntity(self.m_instanceID,self.m_owner,self)
-    GameplayUtils.Print("BP_InteractEntityComponent.OnRep_m_instanceID: 可交互实体 ",UGCObjectUtility.GetObjectName(self.m_owner)," 获得实例ID ",self.m_instanceID)
+    local owner = self:GetOwnerActor()
+    GameplaySystem.InteractEntitySystem:ClientRegisterEntity(self.m_instanceID,owner,self)
+    GameplayUtils.Print("BP_InteractEntityComponent.OnRep_m_instanceID: 可交互实体 ",UGCObjectUtility.GetObjectName(owner)," 获得实例ID ",self.m_instanceID)
+    --UGCDebugSystem.PrintToScreen(UGCObjectUtility.GetObjectName(owner).." InstanceID: " .. tostring(self.m_instanceID),{A=1,B=1,G=1,R=1},30)
 end
 
 ---@public
@@ -150,7 +169,7 @@ function BP_InteractEntityComponent:CollectBehaviourComponents()
     local patToBehaviourBase = UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/InteractEntity/Behaviours/BP_interactEntityBehaviourComponent.BP_InteractEntityBehaviourComponent_C')
     local behaviourClass = UGCObjectUtility.LoadClass(patToBehaviourBase)
     ---@type BP_InteractEntityBehaviourComponent_C[]
-    local comps = UGCActorComponentUtility.GetComponentsByClass(self.m_owner, behaviourClass)
+    local comps = UGCActorComponentUtility.GetComponentsByClass(self:GetOwnerActor(), behaviourClass)
     for k,v in pairs(comps) do
         v:OnAwake(self)
         table.insert(self.m_behaviours,v)
@@ -199,25 +218,13 @@ function BP_InteractEntityComponent:OnComponentBeginOverlap(OverlappedComp, Othe
     if not self.m_isServer then--客户端逻辑还要额外检测逻辑
         --
         if not self:CanPlayerInteract(playerKey) then--该玩家不能继续交互了
-            GameplayUtils.Print("BP_InteractEntityComponent.OnComponentBeginOverlap: ",UGCObjectUtility.GetObjectName(self.m_owner),"return: 玩家",playerKey,"不能继续交互（次数或CD）")
+            GameplayUtils.Print("BP_InteractEntityComponent.OnComponentBeginOverlap: ",UGCObjectUtility.GetObjectName(self.m_owner),"return: 玩家",playerKey,"不能继续交互（次数、CD或未满足条件）")
             return
         end
         --判断实体是否还能继续交互
         if not self:CanEntityInteract() then--实体无法继续交互
             GameplayUtils.Print("BP_InteractEntityComponent.OnComponentBeginOverlap: ",UGCObjectUtility.GetObjectName(self.m_owner),"return: 实体总交互次数已耗尽")
             return
-        end
-        --询问行为，当前是否可以进行交互，有一个行为表示不能交互，直接返回。
-        local canBehaviourInteract = true
-        for k,v in pairs(self.m_behaviours) do
-            if not v:CanInteract(playerKey) then
-                canBehaviourInteract = false
-                break
-            end
-        end
-        if not canBehaviourInteract then
-            GameplayUtils.Print("BP_InteractEntityComponent.OnComponentBeginOverlap: ",UGCObjectUtility.GetObjectName(self),"return: 行为组件阻止交互, playerKey=",playerKey)
-            return--
         end
     end
     --
@@ -434,6 +441,13 @@ function BP_InteractEntityComponent:OnClientInteractCompleted(playerKey, entityI
     else
         GameplayUtils.Print("BP_InteractEntityComponent.OnClientInteractCompleted: 客户端处理玩家",playerKey,"与",entityInstanceID,"交互失败！Error=",errCode," ",errMessage)
     end
+    --
+    UGCTimerUtility.CreateLuaTimer(0.5,function()
+        if UE.IsValid(self) then
+            self:ClientCheckPlayersCanInteract()
+        end
+    end,false)
+    --
     --客户端广播交互完成的全局事件
     GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Global.OnPlayerInteractCompleted, playerKey, entityInstanceID, errCode)
 end
@@ -449,6 +463,19 @@ function BP_InteractEntityComponent:CanPlayerInteract(playerKey)
     local curTime = UGCGameSystem.GetServerTimeSec()
     if self.CooldownTime > 0 and curTime < self:GetPlayerLastInteractTime(playerKey) + self.CooldownTime then
         return false,EInteractEntityErrCode.FailInCooldown
+    end
+    if not self.m_isServer then
+        --询问行为，当前是否可以进行交互，有一个行为表示不能交互，直接返回。
+        local canBehaviourInteract = true
+        for k,v in pairs(self.m_behaviours) do
+            if not v:CanInteract(playerKey) then
+                canBehaviourInteract = false
+                break
+            end
+        end
+        if not canBehaviourInteract then
+            return false,EInteractEntityErrCode.FailUnavailable
+        end
     end
     return true,0
 end

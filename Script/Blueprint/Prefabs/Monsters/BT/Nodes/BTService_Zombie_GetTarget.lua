@@ -15,7 +15,7 @@ function BTService_Zombie_GetTarget:ReceiveTickAI(OwnerController, ControlledPaw
         local alivePlayer = GameplaySystem.MonsterAISystem:ServerFindNearstPlayerAsTarget(ControlledPawn)
         zombiePawn:ServerTrackingPlayer(alivePlayer)
         if not alivePlayer then
-            GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 未找到目标玩家")
+            --GameplayUtils.Print("BTService_Zombie_GetTarget.ReceiveTickAI: 未找到目标玩家")
         end
     end
     --local targetPlayer = zombiePawn:ServerGetCurrentTargetPlayer()

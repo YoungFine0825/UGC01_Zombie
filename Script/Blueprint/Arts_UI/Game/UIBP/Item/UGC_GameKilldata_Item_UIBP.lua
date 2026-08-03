@@ -105,6 +105,7 @@ function UGC_GameKillData_Item_UIBP:LuaInit()
 	GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnRoundFlowChanged,self,self.OnRoundFlowChanged)
 	GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnLocalPlayerGainScore,self,self.OnLocalPlayerGainScore)
 	self.ScoreFloatUIClass = UGCObjectUtility.LoadClass(UGCGameSystem.GetUGCResourcesFullPath('Asset/Blueprint/Arts_UI/Game/UIBP/Item/UGC_ScoreFloat_Item_UIBP.UGC_ScoreFloat_Item_UIBP_C'))
+	self:OnRoundFlowChanged()
 end
 -- [Editor Generated Lua] function define End;
 
@@ -195,8 +196,7 @@ end
 ---@private
 function UGC_GameKillData_Item_UIBP:OnRoundFlowChanged()
 	--当前回合数
-	local gameState = GameplaySystem.GetGameplayStateComponent()
-	local curRound = gameState.RoundFlowInfo.CurRoundNum
+	local curRound = GameplaySystem.GetGameplayStateComponent():GetCurRound()
 	self.TextBlock_Pass:SetText(tostring(curRound))
 end
 

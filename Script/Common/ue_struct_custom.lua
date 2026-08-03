@@ -13,23 +13,24 @@
 ---@field Min int32
 ---@field Sec int32
 
+---@class Struct_WeaponLotteryWeight
+---@field WeaponConfigID int32
+---@field Weight float
+
+---@class Struct_TeamBuffDropInfo
+---@field TeamBuffClass FSoftClassPath
+---@field Weight float
+
+---@class Struct_WeaponLotteryPool
+---@field StartRound int32
+---@field EndRound int32
+---@field WeaponsWeight Struct_WeaponLotteryWeight[]
+
 ---@class Struct_InteractEntityAttribute
 ---@field Key FString
 ---@field Value float
 ---@field bIsTemporary bool
 ---@field Tip FString
-
----@class ShopV2_TabInfo
----@field TabID int32
----@field TabName FString
----@field TabShopName FString
----@field TabShopDesc FString
-
----@class Struct_TeamBuffConfig
----@field ID int32
----@field Name FString
----@field Desc FString
----@field ActorClass FSoftClassPath
 
 ---@class UGCLevelAttribute
 ---@field Attribute FGameAttributeContainer
@@ -225,6 +226,12 @@
 ---@field BuffClass FSoftClassPath
 ---@field BuffTag FGameplayTag
 
+---@class Struct_TeamBuffConfig
+---@field ID int32
+---@field Name FString
+---@field Desc FString
+---@field ActorClass FSoftClassPath
+
 ---@class Struct_WeaponConfig
 ---@field Id int32
 ---@field WeaponItemId int32
@@ -298,7 +305,9 @@
 ---@field RefreshNum int32
 ---@field Price int32
 
----@class Struct_TeamBuffDropInfo
----@field TeamBuffClass FSoftClassPath
----@field Weight float
+---@class ShopV2_TabInfo
+---@field TabID int32
+---@field TabName FString
+---@field TabShopName FString
+---@field TabShopDesc FString
 

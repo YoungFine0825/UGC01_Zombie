@@ -6,7 +6,7 @@ TalentTreeTestManager = TalentTreeTestManager or {
 
 function TalentTreeTestManager:Init(InComponent)
     ugcprint("[TalentTree] TalentTreeTestManager:Init")
-    UGCDebugSystem.DefaultDuration = 3
+    --UGCDebugSystem.DefaultDuration = 3
     self.TalentTreeComponent = InComponent
     self:UpdateCachedVariables()
     self:LoadTestUI()
