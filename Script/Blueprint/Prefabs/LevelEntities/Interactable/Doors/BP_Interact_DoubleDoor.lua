@@ -5,9 +5,11 @@
 ---@field Door01 UStaticMeshComponent
 ---@field Door02 UStaticMeshComponent
 --Edit Below--
+
 local BPExtent = UGCGameSystem.UGCRequire("Script.Gameplay.BPExtend")
 ---@type BP_Interact_DoubleDoor_C
 local BP_Interact_DoubleDoor = BPExtent({},"Script.Blueprint.Prefabs.LevelEntities.Interactable.BP_Interact_LevelObstacle")
+
 --[[--]]
 function BP_Interact_DoubleDoor:ReceiveBeginPlay()
     BP_Interact_DoubleDoor.SuperClass.ReceiveBeginPlay(self)
@@ -39,5 +41,6 @@ function BP_Interact_DoubleDoor:GetAvailableServerRPCs()
     return
 end
 --]]
+
 
 return BP_Interact_DoubleDoor

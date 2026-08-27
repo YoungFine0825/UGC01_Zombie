@@ -36,7 +36,11 @@ function NavigationSystem:FlushRebuild(WorldContext, AgentName)
     self.m_RebuildCountdown = 0
     local agentName = AgentName or self.m_AgentName
     local worldContext = WorldContext or UGCGameSystem.GetGameState()
-    return UGCNavigationSystem.AsyncIncrementalBuild(worldContext, agentName)
+    local buildSuccessful = UGCNavigationSystem.AsyncIncrementalBuild(worldContext, agentName)
+    if not buildSuccessful then
+        GameplayUtils.Exception("NavigationSystem.FlushRebuild: AsyncIncrementalBuild增量构建失败！！！")
+    end
+    return buildSuccessful
 end
 
 ---@private 服务端 Tick：在 m_bPendingRebuild 为 true 的下一帧执行 AsyncIncrementalBuild
@@ -56,8 +60,10 @@ function NavigationSystem:OnServerTick(DeltaTime)
         return
     end
 
-    if not UGCNavigationSystem.AsyncIncrementalBuild(worldContext, self.m_AgentName) then
-        GameplayUtils.Exception("NavigationSystem.OnServerTick: AsyncIncrementalBuild 失败")
+    if UGCNavigationSystem.AsyncIncrementalBuild(worldContext, self.m_AgentName) then
+        GameplayUtils.Print("NavigationSystem.OnServerTick: AsyncIncrementalBuild增量构建成功！")
+    else
+        GameplayUtils.Exception("NavigationSystem.OnServerTick: AsyncIncrementalBuild增量构建失败！！！")
     end
 end
 

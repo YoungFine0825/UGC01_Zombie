@@ -34,7 +34,7 @@ function InteractBehaviour_LinkUnlockObstacle:PreExecute(playerKey)
             ---@type BP_Interact_LevelObstacle_C
             local interactEntity = self.LinkedObstacles:Get(i)
             ---@type BP_InteractEntityComponent_C
-            local interactEntityComp = interactEntity:GetInteractComponent()
+            local interactEntityComp = interactEntity.InteractEntityComponent
             ---@type Gameplay.InteractEntitySystem.InteractionRequest
             local request = {
                 PlayerKey        = playerKey,

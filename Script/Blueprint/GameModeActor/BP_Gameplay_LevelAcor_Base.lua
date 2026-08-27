@@ -23,7 +23,9 @@ end
 
 --[[--]]
 function BP_Gameplay_LevelAcor_Base:ReceiveTick(DeltaTime)
-    BP_Gameplay_LevelAcor_Base.SuperClass.ReceiveTick(self, DeltaTime)
+    if BP_Gameplay_LevelAcor_Base.SuperClass then
+        BP_Gameplay_LevelAcor_Base.SuperClass.ReceiveTick(self, DeltaTime)
+    end
 end
 
 

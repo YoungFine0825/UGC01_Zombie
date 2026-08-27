@@ -50,14 +50,14 @@ end
 
 ---@protected 生效范围 Client
 function BP_GameplayStateComponent:OnRep_GameStateInfo()
-    -- GameplayUtils.Print("BP_GameplayStateComponent.OnRep_GameStateInfo: 当前游戏状态：",self.GameStateInfo.GameState)
+    GameplayUtils.Print("BP_GameplayStateComponent.OnRep_GameStateInfo: 当前游戏状态：",self.GameStateInfo.GameState)
     --广播事件
     GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Client.OnGameStateChanged)
 end
 
 ---@protected 生效范围 Client
 function BP_GameplayStateComponent:OnRep_RoundFlowInfo()
-    -- GameplayUtils.Print("BP_GameplayStateComponent.OnRep_RoundFlowInfo: 当前回合阶段：",self.RoundFlowInfo.RoundPhase)
+    GameplayUtils.Print("BP_GameplayStateComponent.OnRep_RoundFlowInfo: 当前回合阶段：",self.RoundFlowInfo.RoundPhase)
     --广播事件
     GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Client.OnRoundFlowChanged)
 end

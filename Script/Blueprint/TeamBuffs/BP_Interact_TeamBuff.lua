@@ -10,23 +10,23 @@
 ---@type BP_Interact_TeamBuff_C
 local BP_Interact_TeamBuff = {}
  
---[[
+--[[--]]
 function BP_Interact_TeamBuff:ReceiveBeginPlay()
     BP_Interact_TeamBuff.SuperClass.ReceiveBeginPlay(self)
 end
---]]
 
---[[
+
+--[[--]]
 function BP_Interact_TeamBuff:ReceiveTick(DeltaTime)
     BP_Interact_TeamBuff.SuperClass.ReceiveTick(self, DeltaTime)
 end
---]]
 
---[[
+
+--[[--]]
 function BP_Interact_TeamBuff:ReceiveEndPlay()
     BP_Interact_TeamBuff.SuperClass.ReceiveEndPlay(self) 
 end
---]]
+
 
 --[[
 function BP_Interact_TeamBuff:GetReplicatedProperties()

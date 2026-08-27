@@ -7,15 +7,20 @@
 ---@field PlayerInteractTimes int32
 ---@field UIButtonLabel FString
 ---@field UITipText FString
+---@field InstanceID int32
 --Edit Below--
 ---@type BP_InteractEntityComponent_C
 local BP_InteractEntityComponent = {}
 
-BP_InteractEntityComponent.m_instanceID = 0
+--BP_InteractEntityComponent.InstanceID = 0
  
 --[[--]]
 function BP_InteractEntityComponent:ReceiveBeginPlay()
-    BP_InteractEntityComponent.SuperClass.ReceiveBeginPlay(self)
+    GameplayUtils.Print("BP_InteractEntityComponent.ReceiveBeginPlay！！！")
+    --
+    if BP_InteractEntityComponent.SuperClass then
+        BP_InteractEntityComponent.SuperClass.ReceiveBeginPlay(self)
+    end
     --
     ---@type table<number,boolean> 当前进入的玩家，前后端都有
     self.m_overlappedPlayerKeys = {}
@@ -28,8 +33,26 @@ function BP_InteractEntityComponent:ReceiveBeginPlay()
     ---@type BP_InteractEntityBehaviourComponent_C[]
     self.m_behaviours = {}
     --
+    self.m_isInited = false
+    --
+    ---@type BP_InteractableBase_C
+    self.m_owner = nil
+    --
+    self:InitComponent()
+end
+
+---@public
+function BP_InteractEntityComponent:InitComponent()
+    if self.m_isInited then
+        return
+    end
     ---@type BP_InteractableBase_C
     local owner = UGCActorComponentUtility.GetOwner(self)
+    if owner == nil then
+        GameplayUtils.Exception("BP_InteractEntityComponent.InitComponent: 获取Owner失败，退出初始化！！！")
+        return
+    end
+    --
     self.m_owner = owner
     --
     local primCompClass = UGCObjectUtility.FindClass("/Script/Engine.PrimitiveComponent")
@@ -39,13 +62,13 @@ function BP_InteractEntityComponent:ReceiveBeginPlay()
         triggerComp.OnComponentBeginOverlap:Add(self.OnComponentBeginOverlap, self)
         triggerComp.OnComponentEndOverlap:Add(self.OnComponentEndOverlap, self)
     else
-        GameplayUtils.Exception("BP_InteractEntityComponent.ReceiveBeginPlay: 当前Owner不存在名为",self.TriggerComponentName,"的PrimitiveComponent组件！")
+        GameplayUtils.Exception("BP_InteractEntityComponent.InitComponent: 当前Owner不存在名为",self.TriggerComponentName,"的PrimitiveComponent组件！")
     end
     self.m_triggerComp = triggerComp
     --
     self:CollectBehaviourComponents()
     --
-    local isServer = UGCGameSystem.IsServer()
+    local isServer = owner:HasAuthority()
     self.m_isServer = isServer
     if isServer then
         self:OnBeginPlayOnServer()
@@ -55,9 +78,11 @@ function BP_InteractEntityComponent:ReceiveBeginPlay()
     --
     GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnPlayerInteractionCompleted, self, self.OnServerPlayerInteractionCompleted)
     GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnLocalPlayerReceiveInteractionResult, self, self.OnLocalPlayerReceiveInteractionResult)
+    --
+    self.m_isInited = true
 end
 
----@return BP_InteractableBase_C
+---@return BP_Interact_SodaMachine_C
 function BP_InteractEntityComponent:GetOwnerActor()
     if self.m_owner == nil then
         self.m_owner = UGCActorComponentUtility.GetOwner(self)
@@ -72,7 +97,7 @@ function BP_InteractEntityComponent:ReceiveTick(DeltaTime)
     --    ownerLoc.Z = ownerLoc.Z + 320
     --    UGCDebugSystem.DrawDebugString(
     --        ownerLoc,
-    --        "ID: " .. tostring(self.m_instanceID),
+    --        "ID: " .. tostring(self.InstanceID),
     --        nil,
     --        {A = 1, B = 0, G = 1, R = 1},
     --        0
@@ -100,22 +125,24 @@ end
 
 ---@protected
 function BP_InteractEntityComponent:OnBeginPlayOnServer()
+    GameplayUtils.Print("BP_InteractEntityComponent.OnBeginPlayOnServer")
     --服务端向系统注册自身并获取唯一ID
     local owner = self:GetOwnerActor()
     local instanceID = GameplaySystem.InteractEntitySystem:ServerRegisterEntity(owner,self)
-    self.m_instanceID = instanceID
-    UnrealNetwork.RepLazyProperty(self,"m_instanceID")
+    self.InstanceID = instanceID
+    --UnrealNetwork.RepLazyProperty(self,"InstanceID")
     GameplayUtils.Print("BP_InteractEntityComponent.OnBeginPlayOnServer: 可交互实体 ",UGCObjectUtility.GetObjectName(owner)," 获得实例ID ",instanceID)
 end
 
 ---@protected
 function BP_InteractEntityComponent:OnEndPlayOnServer()
-    GameplaySystem.InteractEntitySystem:ServerUnregisterEntity(self.m_instanceID)
+    GameplaySystem.InteractEntitySystem:ServerUnregisterEntity(self.InstanceID)
 end
 
 
 ---@protected
 function BP_InteractEntityComponent:OnBeginPlayOnClient()
+    GameplayUtils.Print("BP_InteractEntityComponent.OnBeginPlayOnClient")
     ---@type table<number,boolean>
     self.m_triggeredPlayers = {}
     self.m_overrideUITipsText = nil
@@ -124,7 +151,15 @@ end
 
 ---@protected
 function BP_InteractEntityComponent:OnEndPlayOnClient()
-    GameplaySystem.InteractEntitySystem:ClientUnregisterEntity(self.m_instanceID)
+    GameplaySystem.InteractEntitySystem:ClientUnregisterEntity(self.InstanceID)
+end
+
+---@private
+function BP_InteractEntityComponent:ClientShowInstanceID()
+    local owner = self:GetOwnerActor()
+    if owner and owner.TextRender then
+        owner.TextRender:SetText("InstanceID: "..tostring(self.InstanceID))
+    end
 end
 
 ---@private
@@ -139,29 +174,30 @@ end
 
 ---@private
 --function BP_InteractEntityComponent:RPC_Multicast_AllocInstanceID(instanceId)
---    self.m_instanceID = instanceId
+--    self.InstanceID = instanceId
 --    GameplayUtils.Print("BP_InteractEntityComponent.RPC_Multicast_AllocInstanceID: 可交互实体 ",GameplayUtils.GetUEObjClassName(self)," 获得实例ID ",instanceId)
 --end
 
 function BP_InteractEntityComponent:GetReplicatedProperties()
-    return {"m_instanceID","Lazy"},
-    {"m_playerInteractedTimes","Lazy"},
+    --return {"InstanceID","Lazy"},
+    return {"m_playerInteractedTimes","Lazy"},
     {"m_playerInteractedTime","Lazy"},
     {"m_interactable","Lazy"}
 end
 
 ---@protected
-function BP_InteractEntityComponent:OnRep_m_instanceID()
+function BP_InteractEntityComponent:OnRep_InstanceID()
     --客户端像交互系统注册自身
     local owner = self:GetOwnerActor()
-    GameplaySystem.InteractEntitySystem:ClientRegisterEntity(self.m_instanceID,owner,self)
-    GameplayUtils.Print("BP_InteractEntityComponent.OnRep_m_instanceID: 可交互实体 ",UGCObjectUtility.GetObjectName(owner)," 获得实例ID ",self.m_instanceID)
-    --UGCDebugSystem.PrintToScreen(UGCObjectUtility.GetObjectName(owner).." InstanceID: " .. tostring(self.m_instanceID),{A=1,B=1,G=1,R=1},30)
+    GameplaySystem.InteractEntitySystem:ClientRegisterEntity(self.InstanceID,owner,self)
+    GameplayUtils.Print("BP_InteractEntityComponent.OnRep_InstanceID: 可交互实体 ",UGCObjectUtility.GetObjectName(owner)," 获得实例ID ",self.InstanceID)
+    --UGCDebugSystem.PrintToScreen(UGCObjectUtility.GetObjectName(owner).." InstanceID: " .. tostring(self.InstanceID),{A=1,B=1,G=1,R=1},30)
+    self:ClientShowInstanceID()
 end
 
 ---@public
 function BP_InteractEntityComponent:GetInstanceID()
-    return self.m_instanceID
+    return self.InstanceID
 end
 
 ---@private
@@ -188,7 +224,7 @@ end
 
 ---@protected
 function BP_InteractEntityComponent:OnComponentBeginOverlap(OverlappedComp, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult)
-    if self.m_instanceID <= 0 then
+    if self.InstanceID <= 0 then
         GameplayUtils.Exception("BP_InteractEntityComponent.OnComponentBeginOverlap: ",UGCObjectUtility.GetObjectName(self.m_owner),"还未拿到唯一ID")
         --GameplayUtils.Print("BP_InteractEntityComponent.OnComponentBeginOverlap: ",UGCObjectUtility.GetObjectName(self),"return: 还未分配唯一ID")
         return--还未分配唯一ID
@@ -243,12 +279,12 @@ function BP_InteractEntityComponent:OnPlayerEnter(playerKey)
     end
     --
     local pc = UGCGameSystem.GetPlayerControllerByPlayerKey(playerKey)
-    GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Global.OnPlayerEnterInteractEntity,pc,self,self.m_instanceID)
+    GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Global.OnPlayerEnterInteractEntity,pc,self,self.InstanceID)
 end
 
 ---@protected
 function BP_InteractEntityComponent:OnComponentEndOverlap(OverlappedComponent, OtherActor, OtherComp, OtherBodyIndex)
-    if self.m_instanceID <= 0 then
+    if self.InstanceID <= 0 then
         GameplayUtils.Exception("BP_InteractEntityComponent.OnComponentEndOverlap: ",UGCObjectUtility.GetObjectName(self),"还未拿到唯一ID")
         return--还未分配唯一ID
     end
@@ -276,7 +312,7 @@ function BP_InteractEntityComponent:OnPlayerLeave(playerKey)
     self.m_overlappedPlayerKeys[playerKey] = nil
     --
     local pc = UGCGameSystem.GetPlayerControllerByPlayerKey(playerKey)
-    GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Global.OnPlayerLeaveInteractEntity,pc,self,self.m_instanceID)
+    GameplaySystem.EventSystem:BroadcastGlobal(GameplayEvents.Global.OnPlayerLeaveInteractEntity,pc,self,self.InstanceID)
 end
 
 ---@public
@@ -335,7 +371,7 @@ end
 ---@param errCode number EInteractEntityErrCode
 ---@param errMessage string
 function BP_InteractEntityComponent:OnServerPlayerInteractionCompleted(playerKey, entityInstanceID, errCode,errMessage)
-    if entityInstanceID ~= self.m_instanceID then
+    if entityInstanceID ~= self.InstanceID then
         return
     end
     if errCode == EInteractEntityErrCode.None then--交互成功
@@ -365,7 +401,7 @@ end
 
 ---@private
 function BP_InteractEntityComponent:ClientCheckPlayersCanInteract()
-    for playerKey,v in pairs(self.m_overlappedPlayerKeys) do
+    for playerKey,v in pairs(self.m_overlappedPlayerKeys or {}) do
         --判断玩家还能不能继续交互
         local canPlayerInteract = self:CanPlayerInteract(playerKey)
         if not canPlayerInteract then--该玩家不能继续交互了
@@ -396,12 +432,12 @@ function BP_InteractEntityComponent:OnRep_m_interactable()
     local canInteract = self.m_interactable
     if canInteract then
         --通知玩家，交互恢复
-        for playerKey,v in pairs(self.m_overlappedPlayerKeys) do
+        for playerKey,v in pairs(self.m_overlappedPlayerKeys or {}) do
             self:OnPlayerEnter(playerKey)
         end
     else
         --通知玩家，交互停止
-        for playerKey,v in pairs(self.m_overlappedPlayerKeys) do
+        for playerKey,v in pairs(self.m_overlappedPlayerKeys or {}) do
             self:OnPlayerLeave(playerKey)
         end
     end
@@ -412,14 +448,14 @@ end
 ---@param entityInstanceID number
 ---@param errCode number EInteractEntityErrCode
 function BP_InteractEntityComponent:OnLocalPlayerReceiveInteractionResult(playerKey, entityInstanceID, errCode,errMessage)
-    if entityInstanceID ~= self.m_instanceID then
+    if entityInstanceID ~= self.InstanceID then
         return
     end
     if errCode == EInteractEntityErrCode.None then--交互成功
         --交互实体客户端侧执行交互行为
         local request = {
             PlayerKey        = playerKey,
-            EntityInstanceID = self.m_instanceID,
+            EntityInstanceID = self.InstanceID,
             EntityInteractComp = self,
             CallbackObj      = self,
             CallbackFunc     = self.OnClientInteractCompleted,

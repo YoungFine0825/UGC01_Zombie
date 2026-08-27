@@ -207,11 +207,13 @@ function UGC_Lobby_Main_UIBP:UpdateMode()
     local ModeID = self.Data.ModeID or LobbyModel:GetCurrentSelectedModeID()
     local ModeConfig = LobbyModel:GetModeConfig(ModeID)
 
-    -- 刷新模式名称
-    self.TextBlock_ModeName:SetText(LobbyUtils.GetTrimmedString(ModeConfig.ModeName, 6))
+    if ModeConfig then
+        -- 刷新模式名称
+        self.TextBlock_ModeName:SetText(LobbyUtils.GetTrimmedString(ModeConfig.ModeName, 6))
 
-    -- 刷新模式图标
-    self.ImageEx_GameMode:SetBrushFromTexture(ModeConfig.ModeBanner, false)
+        -- 刷新模式图标
+        self.ImageEx_GameMode:SetBrushFromTexture(ModeConfig.ModeBanner, false)
+    end
 
     --单人模式无需匹配队友
     local ModeMaxPlayerNum = UGCMultiMode.GetModeSetting(LobbyModel.CurrentSelectedModeID).TeamPlayers

@@ -9,8 +9,8 @@ BP_UGCBackpack.AffixRecords = {}
 local GameData = UGCGameSystem.UGCRequire("Script.Blueprint.UGCGameData");
 
 function BP_UGCBackpack:ReceiveBeginPlay()
-    BP_UGCBackpack.SuperClass.ReceiveBeginPlay(self);
-    ugcprint("[BP_UGCBackpack:ReceiveBeginPlay] Enter");
+    BP_UGCBackpack.SuperClass.ReceiveBeginPlay(self)
+    GameplayUtils.Print("[BP_UGCBackpack:ReceiveBeginPlay] Enter")
 end
 
 function BP_UGCBackpack:CanUseItemV2(ItemDefineID)

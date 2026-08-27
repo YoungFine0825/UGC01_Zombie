@@ -55,8 +55,8 @@ function BP_EntryForZombie_Base:ReceiveBeginPlay()
     self.OccupiedPositionsSlotsIndex = {}
     self.PositionSlot2ZombiePawn = {}
     --
-    self.LeftHitCount = self.MaxHitCount
-    self.bIsBroken = false
+    --self.LeftHitCount = self.MaxHitCount
+    --self.bIsBroken = false
     --
     self:RegisterToLevelActor()
     self:UpdatePlanksVisible()

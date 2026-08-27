@@ -47,9 +47,13 @@ function BP_ServerGameplayComponent:OnServerBeginPlay()
     MsgSys.ListenGlobalMessage(self,"UGC.LevelFlow.GameBegin",self,self.OnGameBegin)
     local SpawnMessage = MsgSys.Messages.UGC.PlayerPawn.PawnSpawn
     MsgSys.ListenGlobalMessage(self, SpawnMessage, self, self.OnPlayerSpawn)
-    MsgSys.ListenGlobalMessage(self,GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnPlayerAliveStateChanged)
-    MsgSys.ListenGlobalMessage(self,GameplayEvents.Server.OnAllZombiesBeEliminated,self,self.OnAllZombiesBeEliminated)
-    MsgSys.ListenGlobalMessage(self,GameplayEvents.Server.OnAllPlayersDead,self,self.OnAllPlayersDead)
+    --
+    GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnPlayerAliveStateChanged)
+    GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnAllZombiesBeEliminated,self,self.OnAllZombiesBeEliminated)
+    GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnAllPlayersDead,self,self.OnAllPlayersDead)
+    --MsgSys.ListenGlobalMessage(self,GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnPlayerAliveStateChanged)
+    --MsgSys.ListenGlobalMessage(self,GameplayEvents.Server.OnAllZombiesBeEliminated,self,self.OnAllZombiesBeEliminated)
+    --MsgSys.ListenGlobalMessage(self,GameplayEvents.Server.OnAllPlayersDead,self,self.OnAllPlayersDead)
 end
 
 ---@protected
@@ -59,9 +63,10 @@ function BP_ServerGameplayComponent:OnServerEndPlay()
     MsgSys.UnListenMessage(self,"UGC.LevelFlow.LevelBegin")
     MsgSys.UnListenMessage(self,"UGC.LevelFlow.GameBegin")
     MsgSys.UnListenMessage(self,UGCGenericMessageSystem.Messages.UGC.PlayerPawn.PawnSpawn)
-    MsgSys.UnListenMessage(self,GameplayEvents.Server.OnPlayerAliveStateChanged)
-    MsgSys.UnListenMessage(self,GameplayEvents.Server.OnAllZombiesBeEliminated)
-    MsgSys.UnListenMessage(self,GameplayEvents.Server.OnAllPlayersDead)
+    GameplaySystem.EventSystem:UnlistenAll(self)
+    --MsgSys.UnListenMessage(self,GameplayEvents.Server.OnPlayerAliveStateChanged)
+    --MsgSys.UnListenMessage(self,GameplayEvents.Server.OnAllZombiesBeEliminated)
+    --MsgSys.UnListenMessage(self,GameplayEvents.Server.OnAllPlayersDead)
 end
 
 --[[

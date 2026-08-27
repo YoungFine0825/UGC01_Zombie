@@ -15,8 +15,10 @@ BP_InteractEntityBehaviourComponent.m_interactEntityComp = nil
 --[[--]]
 function BP_InteractEntityBehaviourComponent:ReceiveBeginPlay()
     BP_InteractEntityBehaviourComponent.SuperClass.ReceiveBeginPlay(self)
-    self.m_isServer = UGCGameSystem.IsServer()
+    local owner = UGCActorComponentUtility.GetOwner(self)
+    self.m_isServer = owner:HasAuthority()
     self.m_isClient = not self.m_isServer
+    --GameplayUtils.Print("BP_InteractEntityBehaviourComponent ",UGCObjectUtility.GetObjectName(owner),"-",UGCObjectUtility.GetObjectName(self)," ReceiveBeginPlay！！！IsClient :",tostring(self.m_isClient))
 end
 
 
@@ -96,6 +98,14 @@ end
 ---@public
 function BP_InteractEntityBehaviourComponent:IsFinished()
     return self.m_isFinished
+end
+
+---@public
+function BP_InteractEntityBehaviourComponent:GetOwnerActor()
+    if self.m_owner == nil then
+        self.m_owner = UGCActorComponentUtility.GetOwner(self)
+    end
+    return self.m_owner
 end
 
 return BP_InteractEntityBehaviourComponent

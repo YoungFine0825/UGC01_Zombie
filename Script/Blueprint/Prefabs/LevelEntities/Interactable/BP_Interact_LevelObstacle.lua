@@ -9,7 +9,7 @@
 local BPExtent = UGCGameSystem.UGCRequire("Script.Gameplay.BPExtend")
 ---@type BP_Interact_LevelObstacle_C
 local BP_Interact_LevelObstacle = BPExtent({},"Script.Blueprint.InteractEntity.BP_InteractableBase")
- 
+
 --[[--]]
 function BP_Interact_LevelObstacle:ReceiveBeginPlay()
     BP_Interact_LevelObstacle.SuperClass.ReceiveBeginPlay(self)
@@ -17,15 +17,19 @@ function BP_Interact_LevelObstacle:ReceiveBeginPlay()
 end
 
 
---[[
+--[[--]]
 function BP_Interact_LevelObstacle:ReceiveTick(DeltaTime)
-    BP_Interact_LevelObstacle.SuperClass.ReceiveTick(self, DeltaTime)
+    if BP_Interact_LevelObstacle.SuperClass then
+        BP_Interact_LevelObstacle.SuperClass.ReceiveTick(self, DeltaTime)
+    end
 end
---]]
+
 
 --[[--]]
 function BP_Interact_LevelObstacle:ReceiveEndPlay()
-    BP_Interact_LevelObstacle.SuperClass.ReceiveEndPlay(self)
+    if BP_Interact_LevelObstacle.SuperClass then
+        BP_Interact_LevelObstacle.SuperClass.ReceiveEndPlay(self)
+    end
     GameplaySystem.EventSystem:UnlistenAll(self)
 end
 
@@ -63,6 +67,5 @@ function BP_Interact_LevelObstacle:OnInteractionCompleted(playkey,instanceID,err
     local Fbox = UGCMathUtility.MakeBox(min,max)
     GameplaySystem.NavigationSystem:AddDynamicNavAffect(Fbox)
 end
-
 
 return BP_Interact_LevelObstacle

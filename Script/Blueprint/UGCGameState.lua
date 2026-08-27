@@ -46,8 +46,14 @@ end
 function UGCGameState:ListenMessage()
    UGCGenericMessageSystem.ListenGlobalMessage(self, "UGC.LevelFlow.LevelBegin", self, self.ResetData)
    if UGCGameSystem.IsServer() then
-      UGCGenericMessageSystem.ListenGlobalMessage(self,GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnPlayerAliveStateChanged)
+      GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnPlayerAliveStateChanged)
+      --UGCGenericMessageSystem.ListenGlobalMessage(self,GameplayEvents.Server.OnPlayerAliveStateChanged,self,self.OnPlayerAliveStateChanged)
    end
+end
+
+function UGCGameState:ReceiveEndPlay()
+   self.SuperClass.ReceiveEndPlay(self)
+   GameplaySystem.EventSystem:UnlistenAll(self)
 end
 
 function UGCGameState:ResetData()
@@ -152,7 +158,7 @@ function UGCGameState:OnPlayerDead(PlayerKey)
    for PlayerKey, Value in pairs(self.DeadPlayerKeys) do
       DeadPlayerNum = DeadPlayerNum + 1
    end
-   ugcprint("UGCGameState:OnPlayerDead Current DeadPlayerNum=" .. tostring(DeadPlayerNum))
+   GameplayUtils.Print("UGCGameState:OnPlayerDead Current DeadPlayerNum=" .. tostring(DeadPlayerNum))
 
    local PlayerNum = GameplaySystem.PlayerSystem:GetCurrentPlayerNum()
    if DeadPlayerNum >= PlayerNum then
@@ -174,7 +180,7 @@ function UGCGameState:OnPlayerAlive(PlayerKey)
    for PlayerKey, Value in pairs(self.DeadPlayerKeys) do
       DeadPlayerNum = DeadPlayerNum + 1
    end
-   ugcprint("UGCGameState:OnPlayerAlive Current DeadPlayerNum=" .. tostring(DeadPlayerNum))
+   GameplayUtils.Print("UGCGameState:OnPlayerAlive Current DeadPlayerNum=" .. tostring(DeadPlayerNum))
 
    local PlayerNum = #self.PlayerArray
    if DeadPlayerNum < PlayerNum then

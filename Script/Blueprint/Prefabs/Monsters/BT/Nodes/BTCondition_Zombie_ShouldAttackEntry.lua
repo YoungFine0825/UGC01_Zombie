@@ -13,7 +13,9 @@ function BTCondition_Zombie_ShouldAttackEntry:PerformConditionCheckAI(OwnerContr
     local entryActor = GameplaySystem.MonsterAISystem:GetZombieEntryActor(OwnerController)
     if entryActor then
         local ret = not entryActor:IsBroken()
-        -- GameplayUtils.Print("BTCondition_Zombie_ShouldAttackEntry: 条件判断结果为：",tostring(ret))
+        --if not ret then
+        --    GameplayUtils.Print("BTCondition_Zombie_ShouldAttackEntry: 条件判断结果为：",tostring(ret))
+        --end
         return ret
     else
         GameplayUtils.Print("BTCondition_Zombie_ShouldAttackEntry: 无法获取到EntryActor")

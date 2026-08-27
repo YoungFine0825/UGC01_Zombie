@@ -9,7 +9,6 @@
 --客户端侧gameplay相关子系统启动器
 ---@type GameplayBooter
 local GameplayBooter = UGCGameSystem.UGCRequire("Script.Gameplay.GameplayBooter")
-GameplayBooter.Construct()
 
 UGCGameSystem.UGCRequire("Script.Blueprint.Arts_UI.Lobby.LobbyFlow")
 UGCGameSystem.UGCRequire("Script.Blueprint.Arts_UI.Game.UIBP.Breakthrough.BreakthroughManager")
@@ -59,16 +58,20 @@ function UGCPlayerController:GetReplicatedProperties()
 end
 
 function UGCPlayerController:ReceiveBeginPlay()
+
     UGCPlayerController.SuperClass.ReceiveBeginPlay(self)
 
-    if UGCGameSystem.IsServer() then
+    if self:HasAuthority() then
+        print("UGCPlayerController.ReceiveBeginPlay On Server")
         if UGCGameState.IsInLobby() then
             self:HandleBeginPlayInServerForLobby()
         else
             self:HandleBeginPlayInServerForFighting()
         end
     else
+        print("UGCPlayerController.ReceiveBeginPlay On Client")
         --
+        GameplayBooter.Construct()
         GameplayBooter.BeginPlayOnClient()
         --
         if UGCGameState.IsInLobby() then
@@ -187,7 +190,7 @@ function UGCPlayerController:ReceiveTick(DeltaTime)
 end
 
 function UGCPlayerController:ReceiveEndPlay()
-    if UGCGameSystem.IsServer() then
+    if self:HasAuthority() then
         UGCGenericMessageSystem.UnListenMessage(self, UGCGenericMessageSystem.Messages.UGC.Player.PlayerEnter) 
         UGCGenericMessageSystem.UnListenMessage(self, UGCGenericMessageSystem.Messages.UGC.Player.PlayerExit) 
     else
@@ -264,7 +267,7 @@ end
 
 ---@public 打开复活界面
 function UGCPlayerController:OpenRespawnUI()
-    if UGCGameSystem.IsServer() then
+    if self:HasAuthority() then
         return
     end
     local ModeID = UGCMultiMode.GetModeID()

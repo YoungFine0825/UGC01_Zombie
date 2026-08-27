@@ -38,7 +38,7 @@ function BP_TeamBuffDropManager:ReceiveBeginPlay()
     end
 
     -- 注册事件监听
-    GameplayUtils.Print("[TeamBuffDrop] 注册事件监听 (Server=", UGCGameSystem.IsServer(), ")")
+    GameplayUtils.Print("[TeamBuffDrop] 注册事件监听 (Server=", tostring(UGCGameSystem.IsServer()), ")")
     GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnZombieBeKilled, self, self.OnZombieBeKilled)
     GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnGameplayStart, self, self.OnGameplayStart)
     GameplaySystem.EventSystem:Listen(GameplayEvents.Server.OnRoundStart, self, self.OnRoundStart)

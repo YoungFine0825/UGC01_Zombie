@@ -5,9 +5,6 @@
 ---
 
 local BPExtend = function(Instance,PathToSuperBP)
-    if Instance.SuperClass == nil then
-        Instance.SuperClass = {}
-    end
     if Instance.BaseClass == nil then
         Instance.BaseClass = {}
     end
@@ -15,10 +12,11 @@ local BPExtend = function(Instance,PathToSuperBP)
     if superClass then
         for k,v in pairs(superClass) do
             if type(v) == "function" then
-                Instance.SuperClass[k] = v
                 Instance.BaseClass[k] = v
             end
-            Instance[k] = v
+            if Instance[k] == nil then
+                Instance[k] = v
+            end
         end
         --setmetatable(Instance.SuperClass,{__index = superClass})
     end

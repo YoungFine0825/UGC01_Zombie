@@ -4,13 +4,13 @@
 ---@field IntervalTime float
 ---@field DrawingTime float
 ---@field DrawnWeaponDisappearTime float
----@field PlayerKey int32
+---@field PlayerKey int64
 ---@field DrawnWeaponConfigID int32
 ---@field AudioDrawing UAkAudioEvent
 ---@field AudioReceive UAkAudioEvent
----@field WeaponPool1 Struct_WeaponLotteryPool
----@field WeaponPool2 Struct_WeaponLotteryPool
----@field WeaponPool3 Struct_WeaponLotteryPool
+---@field WeaponPool1 FStruct_WeaponLotteryPool__pf1780872549
+---@field WeaponPool2 FStruct_WeaponLotteryPool__pf1780872549
+---@field WeaponPool3 FStruct_WeaponLotteryPool__pf1780872549
 --Edit Below--
 local BPExtent = UGCGameSystem.UGCRequire("Script.Gameplay.BPExtend")
 ---@type InteractBehaviour_WeaponLottery_C
@@ -31,8 +31,10 @@ function InteractBehaviour_WeaponLottery:ReceiveBeginPlay()
     InteractBehaviour_WeaponLottery.SuperClass.ReceiveBeginPlay(self)
     self.m_curState = ELotteryState.Idle
     ---@type BP_Interact_WeaponLottery_C
-    self.m_owner = UGCActorComponentUtility.GetOwner(self)
-    self.m_owner.Mesh0:SetVisibility(false)
+    local owner = UGCActorComponentUtility.GetOwner(self)
+    if owner then
+        owner.Mesh0:SetVisibility(false)
+    end
     ---@type table<number,UTexture>
     self.m_preloadedIconTextures = {}
     self.m_weaponIconDynamicMaterial = nil
@@ -44,6 +46,9 @@ function InteractBehaviour_WeaponLottery:ReceiveBeginPlay()
     if self.m_isClient then
         self:CollectAllWeaponConfigIDs()
         self:PreloadWeaponIconTextures()
+    else
+        self.PlayerKey = 0
+        self.DrawnWeaponConfigID = 0
     end
 end
 
@@ -98,12 +103,12 @@ end
 
 ---@protected 服务端通知当前发起抽奖的玩家
 function InteractBehaviour_WeaponLottery:OnRep_PlayerKey()
-
+    GameplayUtils.Print("InteractBehaviour_WeaponLottery.OnRep_PlayerKey: 设置玩家 ",self.PlayerKey," 为当前交互者！")
 end
 
 ---@protected 服务端通知当前抽中的武器配置表ID
 function InteractBehaviour_WeaponLottery:OnRep_DrawnWeaponConfigID()
-
+    GameplayUtils.Print("InteractBehaviour_WeaponLottery.OnRep_DrawnWeaponConfigID: 玩家 ",self.PlayerKey," 抽中武器 ",self.DrawnWeaponConfigID)
 end
 
 ---@public 客户端提前判断是否可以交互
@@ -121,10 +126,12 @@ function InteractBehaviour_WeaponLottery:CanInteract(playerKey)
     end
     if self.m_curState == ELotteryState.ShowingWeapon then--正在显示抽中的武器
         if playerKey ~= self.PlayerKey then
+            GameplayUtils.Exception("InteractBehaviour_WeaponLottery.CanInteract: 不是玩家 ",self.PlayerKey," 无法领取武器")
             return false,EInteractEntityErrCode.FailUnavailable--不是发起抽奖的玩家，不允许交互
         end
     elseif self.m_curState == ELotteryState.Drawing then--正在抽奖中不允许任何人交互
         if playerKey ~= self.PlayerKey then
+            GameplayUtils.Exception("InteractBehaviour_WeaponLottery.CanInteract: 不是玩家 ",self.PlayerKey," 无法交互")
             return false,EInteractEntityErrCode.FailUnavailable--不是发起抽奖的玩家，不允许交互
         end
     end
@@ -159,7 +166,7 @@ end
 function InteractBehaviour_WeaponLottery:Execute(playerKey)
     local curState = self.m_curState
     if curState == ELotteryState.Idle then
-        self:StartLottery(playerKey)--玩家发起抽奖
+        self:ServerStartLottery(playerKey)--玩家发起抽奖
     elseif curState == ELotteryState.Drawing then
 
     elseif curState == ELotteryState.ShowingWeapon then
@@ -169,9 +176,10 @@ function InteractBehaviour_WeaponLottery:Execute(playerKey)
     end
 end
 
-function InteractBehaviour_WeaponLottery:StartLottery(playerKey)
+function InteractBehaviour_WeaponLottery:ServerStartLottery(playerKey)
     if self.m_isServer then
         self.PlayerKey = playerKey
+        UnrealNetwork.RepLazyProperty(self,"PlayerKey")
         --消耗玩家积分
         GameplaySystem.PlayerSystem:ConsumePlayerScore(playerKey,self.Price)
         --抽取武器
@@ -331,11 +339,17 @@ function InteractBehaviour_WeaponLottery:OnRep_m_curState()
     ---@type UGCPlayerController_C
     local pc = UGCGameSystem.GetLocalPlayerController()
     local curState = self.m_curState
+    GameplayUtils.Print("InteractBehaviour_WeaponLottery.OnRep_m_curState: 切换抽奖状态至 ",curState)
     if curState == ELotteryState.Idle then
         self:StopDrawingAnim()
-        self.m_owner.Mesh0:SetVisibility(false)
-        self.m_interactEntityComp:ClientOverrideHUDTipsText(nil)
-        self.m_interactEntityComp:ClientOverrideHUDInteractionBtnLabel(nil)
+        local owner = self:GetOwnerActor()
+        if owner then
+            owner.Mesh0:SetVisibility(false)
+        end
+        if self.m_interactEntityComp then
+            self.m_interactEntityComp:ClientOverrideHUDTipsText(nil)
+            self.m_interactEntityComp:ClientOverrideHUDInteractionBtnLabel(nil)
+        end
         --
         pc.PlayerInteractEntityComponent:ClientUpdateInteractionUIWidget()
     elseif curState == ELotteryState.Drawing then
@@ -349,8 +363,10 @@ function InteractBehaviour_WeaponLottery:OnRep_m_curState()
         self.m_drawingSoundID = UGCSoundManagerSystem.PlaySound2D(self.AudioDrawing)
     elseif curState == ELotteryState.ShowingWeapon then
         local weaponName = GameplaySystem.WeaponConfigMgr:GetWeaponName(self.DrawnWeaponConfigID)
-        self.m_interactEntityComp:ClientOverrideHUDTipsText(string.format("领取%s",weaponName))
-        self.m_interactEntityComp:ClientOverrideHUDInteractionBtnLabel("领取")
+        if self.m_interactEntityComp then
+            self.m_interactEntityComp:ClientOverrideHUDTipsText(string.format("领取%s",weaponName))
+            self.m_interactEntityComp:ClientOverrideHUDInteractionBtnLabel("领取")
+        end
         --
         self:ClientPlayWeaponDisappearAnim()
         --
@@ -367,7 +383,10 @@ end
 ---@protected 客户端播放抽奖过程
 function InteractBehaviour_WeaponLottery:ClientPlayDrawingAnim()
     self.m_lastDrawingWeaponConfigID = 0
-    self.m_owner.Mesh0:SetVisibility(true)
+    local owner = self:GetOwnerActor()
+    if owner then
+        owner.Mesh0:SetVisibility(true)
+    end
     self:CreateWeaponIconMaterialInstance()
     self:StopDrawingAnim()
     self.m_drawingAnimTimer = UGCTimerUtility.CreateLuaTimer(0.2, function()
@@ -381,7 +400,10 @@ end
 ---@protected
 function InteractBehaviour_WeaponLottery:ClientPlayWeaponDisappearAnim()
     self:StopDrawingAnim()
-    self.m_owner.Mesh0:SetVisibility(true)
+    local owner = self:GetOwnerActor()
+    if owner then
+        owner.Mesh0:SetVisibility(true)
+    end
     self:CreateWeaponIconMaterialInstance()
     self:DisplayWeaponIcon(self.DrawnWeaponConfigID)
 end
@@ -472,9 +494,14 @@ function InteractBehaviour_WeaponLottery:CreateWeaponIconMaterialInstance()
     if self.m_weaponIconDynamicMaterial then
         return
     end
-    ---@type UPrimitiveComponent
-    local weaponIconMesh = self.m_owner.Mesh0
-    self.m_weaponIconDynamicMaterial = weaponIconMesh:CreateDynamicMaterialInstance(0)
+    local owner = self:GetOwnerActor()
+    if owner then
+        ---@type UPrimitiveComponent
+        local weaponIconMesh = owner.Mesh0
+        self.m_weaponIconDynamicMaterial = weaponIconMesh:CreateDynamicMaterialInstance(0)
+    else
+        GameplayUtils.Exception("InteractBehaviour_WeaponLottery.CreateWeaponIconMaterialInstance: Owner is nil !!!")
+    end
 end
 
 ---@protected 在 Mesh0 上显示指定武器的图标

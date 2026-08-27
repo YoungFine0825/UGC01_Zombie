@@ -106,8 +106,16 @@ function InteractBehaviour_PurchaseWeapon:Execute(playerKey)
     end
 end
 
+---@private
+function InteractBehaviour_PurchaseWeapon:OnRep_WeaponConfigID()
+    if self.m_isClient then
+        self:LoadWeaponIcon()
+    end
+end
+
 ---@protected
 function InteractBehaviour_PurchaseWeapon:LoadWeaponIcon()
+    --GameplayUtils.Print("InteractBehaviour_PurchaseWeapon:LoadWeaponIcon")
     local iconPathObj = GameplaySystem.WeaponConfigMgr:GetWeaponEquipBarIconByConfigID(self.WeaponConfigID)
     if iconPathObj then
         local iconPath = UGCObjectUtility.GetPathBySoftObjectPath(iconPathObj)
@@ -124,6 +132,7 @@ end
 
 ---@protected
 function InteractBehaviour_PurchaseWeapon:ShowWeaponIcon()
+    --GameplayUtils.Print("InteractBehaviour_PurchaseWeapon:ShowWeaponIcon")
     ---@type BP_Interact_WeaponSeller_C
     local owner = UGCActorComponentUtility.GetOwner(self)
     ---@type UPrimitiveComponent

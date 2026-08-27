@@ -3,7 +3,6 @@
 --服务端侧gameplay相关子系统启动器
 ---@type GameplayBooter
 local GameplayBooter = UGCGameSystem.UGCRequire("Script.Gameplay.GameplayBooter")
-GameplayBooter.Construct()
 
 local UGCGameMode = {}
 UGCGameMode.IsStartMatch = false
@@ -13,6 +12,7 @@ local UGCGameState = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameState')
 
 function UGCGameMode:ReceiveBeginPlay()
 
+    GameplayBooter.Construct()
     GameplayBooter.BeginPlayOnServer()
 
     local ModeID = UGCMultiMode.GetModeID()

@@ -66,7 +66,7 @@ function EventSystem:Listen(eventName, owner, callback)
         return nil
     end
     if type(callback) ~= "function" then
-        GameplayUtils.Print("[EventSystem] Listen failed: callback is not function, event = ", tostring(eventName))
+        GameplayUtils.Print("[EventSystem] Listen failed: callback must be a function but it is a ",type(callback),", event = ", tostring(eventName))
         return nil
     end
 

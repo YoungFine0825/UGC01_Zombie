@@ -56,6 +56,14 @@ function WeaponSystem:GetAvailableWeaponSlotName(playerController,weaponConfigId
             end
         end
     end
+    --兜底：获取不到当前武器槽位（玩家收起全部武器，空手状态）时，默认派发到武器配置的第一个槽位（主武器即MainSlot1）
+    if slotName == nil then
+        for k,v in pairs(weaponConfig.WeaponSlots) do
+            slotName = v.SlotTag.TagName
+            Print("WeaponSystem.GetAvailableWeaponSlotName： 未获取到当前武器槽位（空手状态），默认派发到",slotName)
+            break
+        end
+    end
     if slotName ~= nil then
         local isWeaponSlotEnabled = UGCBackpackSystemV2.GetEquipSlotEnable(playerPawn,slotName)
         Print("WeaponSystem.GetAvailableWeaponSlotName： 装备槽",slotName,"是否可用？ ",tostring(isWeaponSlotEnabled))
@@ -107,6 +115,46 @@ function WeaponSystem:Internal_ServerReplenishWeaponItem(player,itemId,maxNum)
     end
 end
 
+---@private 首次获得武器时发放并装备配置的配件
+---@param player PlayerPawn | PlayerController
+---@param weaponConfig Struct_WeaponConfig
+---@param weaponDefineId ItemDefineID
+function WeaponSystem:Internal_ServerEquipWeaponParts(player,weaponConfig,weaponDefineId)
+    if not weaponConfig.WeaponParts or #weaponConfig.WeaponParts == 0 then
+        return
+    end
+    if not weaponDefineId then
+        Exception("WeaponSystem.Internal_ServerEquipWeaponParts: 武器DefineID为空")
+        return
+    end
+
+    for _,partConfig in ipairs(weaponConfig.WeaponParts) do
+        local partItemId = partConfig.ItemID or 0
+        local slotName = partConfig.SlotTag and partConfig.SlotTag.TagName or ""
+        if partItemId > 0 and slotName ~= "" then
+            local actualCount, defineIds = UGCBackpackSystemV2.AddItemV2(player,partItemId,1)
+            if actualCount > 0 then
+                local partDefineId = defineIds and defineIds[1]
+                if not partDefineId then
+                    partDefineId = GameplaySystem.BackpackSystem:GetGainedItemDefineId(player,partItemId)
+                end
+                if partDefineId then
+                    local attachSuccess = UGCBackpackSystemV2.AttachEquipmentToTargetItem(
+                        player,partDefineId,weaponDefineId,slotName)
+                    if not attachSuccess then
+                        Exception("WeaponSystem.Internal_ServerEquipWeaponParts: 配件装备失败, ItemID=",partItemId," Slot=",slotName)
+                        UGCBackpackSystemV2.RemoveItemByDefineIDV2(player,partDefineId,1)
+                    end
+                else
+                    Exception("WeaponSystem.Internal_ServerEquipWeaponParts: 无法获取配件DefineID, ItemID=",partItemId)
+                end
+            else
+                Exception("WeaponSystem.Internal_ServerEquipWeaponParts: 配件发放失败, ItemID=",partItemId)
+            end
+        end
+    end
+end
+
 ---@public 向玩家派发武器通用流程
 ---@param playerKey number
 ---@param weaponConfigId number
@@ -139,6 +187,7 @@ function WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,weaponConfig
     local addWeapSuccessful = false
     local weaponItemId = weaponConfig.WeaponItemId
     local curWeaponItemNum = UGCBackpackSystemV2.GetItemCountV2(playerPawn,weaponItemId)
+    local isFirstObtain = curWeaponItemNum <= 0
     ---@type ItemDefineID
     local weaponDefineId = nil
     if curWeaponItemNum > weaponConfig.MaxWeaponNum then--武器数量已满
@@ -157,7 +206,7 @@ function WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,weaponConfig
     end
     --如果是要替换槽位内已有武器，需要移除武器道具和弹药道具
     if not isEmptySlot and curWeaponCofnigId > 0 and curWeaponCofnigId ~= weaponConfigId then
-        local removeSuccessful = self:ServerRemoveEquippedWeapon(playerPawn,curWeaponCofnigId)
+        local removeSuccessful = self:ServerRemoveEquippedWeapon(playerPawn,curWeaponCofnigId,playerKey)
         if removeSuccessful then
             Print("WeaponSystem.ServerDeliverAndEquipWeaponToPlayer: 玩家",playerKey,"移除槽位上",weaponSlotName,"已装备的武器",curWeaponCofnigId)
         else
@@ -174,6 +223,9 @@ function WeaponSystem:ServerDeliverAndEquipWeaponToPlayer(playerKey,weaponConfig
     weaponDefineId = GameplaySystem.BackpackSystem:GetGainedItemDefineId(playerPawn,weaponItemId)
     local equipSuccess = UGCBackpackSystemV2.EquipItemV2(playerPawn, weaponSlotName, weaponDefineId)
     if equipSuccess then
+        if isFirstObtain then
+            self:Internal_ServerEquipWeaponParts(playerPawn,weaponConfig,weaponDefineId)
+        end
         if bSwithWeapon then
             self:SwitchMainWeaponSlot(playerKey,weaponSlotName)
         end
@@ -185,11 +237,36 @@ end
 
 ---@public
 ---@return boolean
-function WeaponSystem:ServerRemoveEquippedWeapon(player,weaponConfigID)
+function WeaponSystem:ServerRemoveEquippedWeapon(player,weaponConfigID,playerKey)
     local weaponConfig = GameplaySystem.WeaponConfigMgr:GetWeaponConfigData(weaponConfigID)
     if not weaponConfig then
         return false
     end
+    local weaponItemId = weaponConfig.WeaponItemId
+
+    -- 卸载并删除该武器配置的配件，保留玩家手动装配的其他配件
+    local weaponDefineId = GameplaySystem.BackpackSystem:GetGainedItemDefineId(player,weaponItemId)
+    local weaponActor = playerKey and self:GetWeaponActorByConfigID(playerKey,weaponConfigID) or nil
+    local attachedParts = {}
+    if weaponActor then
+        for _,defineId in ipairs(UGCGunSystem.GetWeaponAllAttachmentIDList(weaponActor) or {}) do
+            attachedParts[defineId.TypeSpecificID] = defineId
+        end
+    end
+    for _,partConfig in ipairs(weaponConfig.WeaponParts or {}) do
+        local partDefineId = attachedParts[partConfig.ItemID]
+        local slotName = partConfig.SlotTag and partConfig.SlotTag.TagName or ""
+        if partDefineId then
+            local detachSuccess = weaponDefineId and slotName ~= "" and
+                UGCBackpackSystemV2.DetachEquipmentToTargetItem(player,weaponDefineId,slotName)
+            if detachSuccess then
+                UGCBackpackSystemV2.RemoveItemByDefineIDV2(player,partDefineId,1)
+            else
+                Exception("WeaponSystem.ServerRemoveEquippedWeapon: 配件卸载失败, ItemID=",partConfig.ItemID," Slot=",slotName)
+            end
+        end
+    end
+
     --移除子弹
     local weaponAmmoId = weaponConfig.AmmoItemId
     if weaponAmmoId > 0 then
@@ -197,7 +274,6 @@ function WeaponSystem:ServerRemoveEquippedWeapon(player,weaponConfigID)
         UGCBackpackSystemV2.RemoveItemV2(player,weaponAmmoId,ammoCnt)
     end
     --
-    local weaponItemId = weaponConfig.WeaponItemId
     local curCnt = UGCBackpackSystemV2.GetItemCountV2(player,weaponItemId)
     local removeCnt = UGCBackpackSystemV2.RemoveItemV2(player,weaponItemId,curCnt)
     return removeCnt >= curCnt

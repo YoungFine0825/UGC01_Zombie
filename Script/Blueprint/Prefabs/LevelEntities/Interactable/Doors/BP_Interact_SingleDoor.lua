@@ -2,9 +2,11 @@
 ---@field InteractBehaviour_PlayDoTween InteractBehaviour_PlayDoTween_C
 ---@field DoTweenDoor BP_DoTween_C
 --Edit Below--
+
 local BPExtent = UGCGameSystem.UGCRequire("Script.Gameplay.BPExtend")
 ---@type BP_Interact_SingleDoor_C
 local BP_Interact_SingleDoor = BPExtent({},"Script.Blueprint.Prefabs.LevelEntities.Interactable.BP_Interact_LevelObstacle")
+
  
 --[[--]]
 function BP_Interact_SingleDoor:ReceiveBeginPlay()
@@ -36,5 +38,6 @@ function BP_Interact_SingleDoor:GetAvailableServerRPCs()
     return
 end
 --]]
+
 
 return BP_Interact_SingleDoor

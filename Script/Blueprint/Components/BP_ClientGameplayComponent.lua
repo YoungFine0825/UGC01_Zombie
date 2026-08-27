@@ -17,6 +17,7 @@ BP_ClientGameplayComponent.m_playerController = nil
  
 --[[--]]
 function BP_ClientGameplayComponent:ReceiveBeginPlay()
+    GameplayUtils.Print("BP_ClientGameplayComponent.ReceiveBeginPlay")
     BP_ClientGameplayComponent.SuperClass.ReceiveBeginPlay(self)
     if not UGCGameSystem.IsServer() then
         self:OnBeginPlay()
@@ -39,21 +40,24 @@ function BP_ClientGameplayComponent:ReceiveEndPlay()
 end
 
 function BP_ClientGameplayComponent:OnBeginPlay()
+    GameplayUtils.Print("BP_ClientGameplayComponent.OnBeginPlay")
     ---@type UGCGameState_C
     local gameState = UGCGameSystem.GetGameState()
     self.GameplayStateComp = gameState.GameplayStateComponent
 
     self.m_playerController = UGCActorComponentUtility.GetOwner(self)
 
-    local ClientEvts = GameplayEvents.Client
-    UGCGenericMessageSystem.ListenUserDefinedGlobalMessage(self,ClientEvts.OnGameStateChanged,self,self.OnGameStateChanged)
-    UGCGenericMessageSystem.ListenUserDefinedGlobalMessage(self,ClientEvts.OnRoundFlowChanged,self,self.OnRoundFlowChanged)
+    GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnGameStateChanged,self,self.OnGameStateChanged)
+    GameplaySystem.EventSystem:Listen(GameplayEvents.Client.OnRoundFlowChanged,self,self.OnRoundFlowChanged)
+    --UGCGenericMessageSystem.ListenUserDefinedGlobalMessage(self,GameplayEvents.Client.OnGameStateChanged,self,self.OnGameStateChanged)
+    --UGCGenericMessageSystem.ListenUserDefinedGlobalMessage(self,GameplayEvents.Client.OnRoundFlowChanged,self,self.OnRoundFlowChanged)
 end
 
 function BP_ClientGameplayComponent:OnEndPlay()
-    local ClientEvts = GameplayEvents.Client
-    UGCGenericMessageSystem.UnListenMessage(self,ClientEvts.OnGameStateChanged)
-    UGCGenericMessageSystem.UnListenMessage(self,ClientEvts.OnRoundFlowChanged)
+    GameplayUtils.Print("BP_ClientGameplayComponent.OnEndPlay")
+    GameplaySystem.EventSystem:UnlistenAll(self)
+    --UGCGenericMessageSystem.UnListenMessage(self,GameplayEvents.Client.OnGameStateChanged)
+    --UGCGenericMessageSystem.UnListenMessage(self,GameplayEvents.Client.OnRoundFlowChanged)
 end
 
 function BP_ClientGameplayComponent:GetAvailableClientRPCs()
@@ -75,7 +79,7 @@ function BP_ClientGameplayComponent:OnGameStateChanged()
     elseif gameState == EGameState.GameEnd then
         UGCWidgetManagerSystem.ShowTipsUI("游戏结束！")
         --关闭玩家数据界面
-        self:DestroyPlayerRecordDataUI()
+        --self:DestroyPlayerRecordDataUI()
         --返回大厅
         GameplaySystem.BackToLobby()
     end

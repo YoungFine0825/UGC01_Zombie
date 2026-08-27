@@ -60,6 +60,10 @@ end
 ---@param entityComp BP_InteractEntityComponent_C
 ---@return number
 function Cls:ServerRegisterEntity(entityActor,entityComp)
+    if not UGCGameSystem.IsServer() then
+        GameplayUtils.Exception("InteractEntitySystem.ServerRegisterEntity: Cannot call on client !!!")
+        return 0
+    end
     local instanceID = self:AllocInstanceID()
     self.m_instanceID2Entity[instanceID] = entityActor
     self.m_instanceID2Comp[instanceID] = entityComp

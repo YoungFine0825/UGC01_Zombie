@@ -2,12 +2,14 @@
 local Utils = {}
 
 function Utils.Print(...)
-    ugcprint_concat("[Gameplay] ",...)
+    --ugcprint_concat("[Gameplay] ",...)
+    print(table.concat({"[Gameplay]: ",...}))
 end
 
 function Utils.Exception(...)
     -- ugc_exception(...)
-    ugcprint_concat("[Gameplay Exception]: ",...)
+    --ugcprint_concat("[Gameplay Exception]: ",...)
+    print(table.concat({"[Gameplay Exception]: ",...}))
 end
 
 ---@public
